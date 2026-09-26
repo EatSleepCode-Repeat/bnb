@@ -1,0 +1,6 @@
+# System PATH setup
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+
+# Default Aliases
+alias ll="ls -la"
+alias g="git status"

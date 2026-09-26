@@ -1,0 +1,19 @@
+[package]
+name = "bnb-shell"
+version = "0.1.0"
+edition = "2021"
+authors = ["Chris Clines <chrisjclines@hotmail.com>"]
+description = "A fast, polished, cross-platform terminal shell built in Rust with Powerlevel10k aesthetics."
+license = "MIT"
+repository = "https://github.com/EatSleepCode-Repeat/bnb"
+readme = "README.md"
+keywords = ["shell", "terminal", "zsh", "prompt", "cli"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "bnb"
+path = "src/main.rs"
+
+[dependencies]
+rustyline = "14.0"
+terminal_size = "0.4"
