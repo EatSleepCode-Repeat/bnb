@@ -46,7 +46,7 @@ impl Completer for BnbHelper {
         let mut matches = Vec::new();
 
         if is_command_pos && !current_word.contains('/') {
-            let builtins = ["cd", "export", "alias", "exit", "z"];
+            let builtins = ["cd", "export", "alias", "exit", "z", "mkcd", "bnb-update"];
             for b in builtins {
                 if b.starts_with(current_word) {
                     matches.push(Pair {
@@ -175,7 +175,10 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
 }
 
 fn is_valid_cmd(cmd: &str) -> bool {
-    if matches!(cmd, "cd" | "export" | "alias" | "exit" | "z") {
+    if matches!(
+        cmd,
+        "cd" | "export" | "alias" | "exit" | "z" | "mkcd" | "bnb-update"
+    ) {
         return true;
     }
     if crate::builtins::alias::resolve(cmd).is_some() {

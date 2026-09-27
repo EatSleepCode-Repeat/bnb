@@ -1,9 +1,11 @@
 mod builtins;
 mod config;
 mod executor;
+mod expander;
 mod helper;
 mod parser;
 mod prompt;
+mod updater;
 
 use std::env;
 use std::io::{self, Write};
@@ -54,6 +56,9 @@ fn main() {
     config::load_config();
     ensure_system_path();
 
+    updater::check_for_updates_async();
+    updater::print_update_banner_if_available();
+
     if let Ok(pwd) = env::current_dir() {
         builtins::z::add_path(&pwd);
     }
@@ -65,6 +70,7 @@ fn main() {
     rl.set_helper(Some(BnbHelper::new()));
 
     let history_file = env::var("HOME")
+        .or_else(|_| env::var("USERPROFILE"))
         .map(|h| PathBuf::from(h).join(".bnb_history"))
         .ok();
 

@@ -1,3 +1,4 @@
+use crate::expander::expand_args;
 use crate::parser::ast::{Pipeline, Redirection};
 use std::env;
 use std::fs::{File, OpenOptions};
@@ -77,18 +78,19 @@ pub fn execute_pipeline(pipeline: &Pipeline) -> Result<i32, String> {
             return Ok(0);
         }
 
+        let raw_args = &cmd.args[1..];
+        let expanded_args = expand_args(raw_args);
+
         let binary_path = find_binary(&cmd.args[0]);
 
         let mut sys_cmd = match binary_path {
             Some(path) => {
                 let mut c = Command::new(path);
-                if cmd.args.len() > 1 {
-                    c.args(&cmd.args[1..]);
-                }
+                c.args(&expanded_args);
                 c
             }
             None => {
-                let full_cmd = cmd.args.join(" ");
+                let full_cmd = format!("{} {}", cmd.args[0], expanded_args.join(" "));
                 if cfg!(target_os = "windows") {
                     let mut c = Command::new("cmd.exe");
                     c.args(["/C", &full_cmd]);
@@ -143,17 +145,18 @@ pub fn execute_pipeline(pipeline: &Pipeline) -> Result<i32, String> {
             continue;
         }
 
+        let raw_args = &cmd.args[1..];
+        let expanded_args = expand_args(raw_args);
+
         let binary_path = find_binary(&cmd.args[0]);
         let mut sys_cmd = match binary_path {
             Some(path) => {
                 let mut c = Command::new(path);
-                if cmd.args.len() > 1 {
-                    c.args(&cmd.args[1..]);
-                }
+                c.args(&expanded_args);
                 c
             }
             None => {
-                let full_cmd = cmd.args.join(" ");
+                let full_cmd = format!("{} {}", cmd.args[0], expanded_args.join(" "));
                 if cfg!(target_os = "windows") {
                     let mut c = Command::new("cmd.exe");
                     c.args(["/C", &full_cmd]);
