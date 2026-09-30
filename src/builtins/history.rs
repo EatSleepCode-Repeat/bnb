@@ -29,7 +29,7 @@ pub fn run_with_writer(args: &[String], out: &mut dyn Write) -> Result<(), Strin
 
     if let Ok(file) = File::open(&path) {
         let reader = BufReader::new(file);
-        for (i, line) in reader.lines().flatten().enumerate() {
+        for (i, line) in reader.lines().map_while(Result::ok).enumerate() {
             let _ = writeln!(out, "  \x1b[1;36m{:4}\x1b[0m  {}", i + 1, line);
         }
     }

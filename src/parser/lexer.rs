@@ -113,7 +113,7 @@ fn read_word(
             '>' => break,
             '\'' => {
                 chars.next(); // consume opening single quote
-                while let Some(c) = chars.next() {
+                for c in chars.by_ref() {
                     if c == '\'' {
                         break;
                     }
@@ -225,10 +225,8 @@ fn expand_tilde(word: &str) -> String {
 
     if word == "~" {
         home
-    } else if word.starts_with("~/") {
-        format!("{}{}", home, &word[1..])
-    } else if word.starts_with("~\\") {
-        format!("{}{}", home, &word[1..])
+    } else if word.starts_with("~/") || word.starts_with("~\\") {
+    format!("{}{}", home, &word[1..])
     } else {
         word.to_string()
     }

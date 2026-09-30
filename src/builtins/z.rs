@@ -34,7 +34,7 @@ fn load_entries() -> Vec<ZEntry> {
 
     if let Ok(file) = File::open(file_path) {
         let reader = BufReader::new(file);
-        for line in reader.lines().flatten() {
+        for line in reader.lines().map_while(Result::ok) {
             let parts: Vec<&str> = line.split('|').collect();
             if parts.len() == 3 {
                 if let (Ok(w), Ok(t)) = (parts[1].parse::<f64>(), parts[2].parse::<u64>()) {

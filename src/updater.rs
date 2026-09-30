@@ -34,7 +34,7 @@ pub fn check_for_updates_async() {
 
         if let Ok(file) = File::open(&cache_file) {
             let reader = BufReader::new(file);
-            let lines: Vec<String> = reader.lines().flatten().collect();
+            let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
             if lines.len() >= 2 {
                 if let Ok(last_check) = lines[0].parse::<u64>() {
                     if now.saturating_sub(last_check) < DAY_IN_SECS {
@@ -81,7 +81,7 @@ pub fn print_update_banner_if_available() {
 
     if let Ok(file) = File::open(cache_file) {
         let reader = BufReader::new(file);
-        let lines: Vec<String> = reader.lines().flatten().collect();
+        let lines: Vec<String> = reader.lines().map_while(Result::ok).collect();
         if lines.len() >= 2 {
             let latest_version = lines[1].trim();
             if !latest_version.is_empty() && is_newer(latest_version, CURRENT_VERSION) {

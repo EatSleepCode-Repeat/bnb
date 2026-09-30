@@ -29,22 +29,20 @@ pub fn parse_file(path: &Path) -> Result<(), String> {
         .map_err(|e| format!("source: cannot read {}: {}", path.display(), e))?;
 
     let reader = BufReader::new(file);
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {
             continue;
         }
 
-        if trimmed.starts_with("export ") {
-            let kv = &trimmed[7..];
+        if let Some(kv) = trimmed.strip_prefix("export ") {
             if let Some((key, val)) = kv.split_once('=') {
                 let clean_key = key.trim();
                 let clean_val = val.trim().trim_matches(|c| c == '\'' || c == '"');
                 let expanded = crate::builtins::export::expand_env(clean_val);
                 env::set_var(clean_key, expanded);
             }
-        } else if trimmed.starts_with("alias ") {
-            let kv = &trimmed[6..];
+        } else if let Some(kv) = trimmed.strip_prefix("alias ") {
             if let Some((key, val)) = kv.split_once('=') {
                 let clean_key = key.trim();
                 let clean_val = val.trim().trim_matches(|c| c == '\'' || c == '"');

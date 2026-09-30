@@ -114,7 +114,7 @@ pub fn expand_globs(arg: &str) -> Vec<String> {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
             if match_pattern(&pattern, &name) {
-                let full = if dir == PathBuf::from(".") {
+                let full = if dir == *"." {
                     name
                 } else {
                     dir.join(name).to_string_lossy().to_string()

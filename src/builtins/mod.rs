@@ -76,5 +76,5 @@ fn run_mkcd(args: &[String]) -> Result<(), String> {
     fs::create_dir_all(&path)
         .map_err(|e| format!("mkcd: failed to create {}: {}", target, e))?;
 
-    cd::run(&[target.clone()])
+    cd::run(std::slice::from_ref(target))
 }
