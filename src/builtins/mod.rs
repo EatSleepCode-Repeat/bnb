@@ -8,6 +8,7 @@ pub mod history;
 pub mod pwd;
 pub mod source;
 pub mod unalias;
+pub mod undo;
 pub mod unset;
 pub mod which;
 pub mod z;
@@ -35,6 +36,7 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "z"
             | "mkcd"
             | "bnb-update"
+            | "undo"
     )
 }
 
@@ -60,6 +62,7 @@ pub fn execute_with_writer(cmd: &str, args: &[String], out: &mut dyn Write) -> R
         "z" => z::run(args),
         "mkcd" => run_mkcd(args),
         "bnb-update" => crate::updater::run_update(),
+        "undo" => undo::run().map_err(|e| format!("undo: {}", e)),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
 }

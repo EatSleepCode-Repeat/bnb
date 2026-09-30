@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::process::Command;
 use std::time::Duration;
 use terminal_size::{terminal_size, Width};
@@ -255,4 +256,21 @@ fn format_duration(d: Duration) -> String {
     } else {
         format!("{}ms", d.as_millis())
     }
+}
+
+/// Reads ~/.bnb_history lines in reverse chronological order for Ctrl+R Fuzzy Search
+pub fn load_history_entries() -> Vec<String> {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return Vec::new(),
+    };
+
+    let history_path = home.join(".bnb_history");
+    if !history_path.exists() {
+        return Vec::new();
+    }
+
+    fs::read_to_string(history_path)
+        .map(|data| data.lines().rev().map(|s| s.to_string()).collect())
+        .unwrap_or_default()
 }
