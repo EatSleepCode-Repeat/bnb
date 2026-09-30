@@ -1,6 +1,6 @@
 [package]
 name = "bnb-shell"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Chris Clines"]
 description = "A fast, polished, cross-platform terminal shell built in Rust with Powerlevel10k aesthetics."
@@ -17,3 +17,9 @@ path = "src/main.rs"
 [dependencies]
 rustyline = "14.0"
 terminal_size = "0.4"
+crossterm = "0.29"
+fuzzy-matcher = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+dirs = "6.0"

@@ -1,10 +1,19 @@
 use std::env;
+use std::fs;
 use std::process::Command;
 use std::time::Duration;
 use terminal_size::{terminal_size, Width};
 
 fn get_home_dir() -> Option<String> {
     env::var("HOME").or_else(|_| env::var("USERPROFILE")).ok()
+}
+
+struct GitStatus {
+    branch: String,
+    dirty: bool,
+    untracked: bool,
+    ahead: u32,
+    behind: u32,
 }
 
 pub fn get_prompt(last_duration: Option<Duration>, last_status: Option<i32>) -> String {
@@ -20,7 +29,7 @@ pub fn get_prompt(last_duration: Option<Duration>, last_status: Option<i32>) -> 
         })
         .unwrap_or_else(|_| "/".into());
 
-    let git_branch = get_git_branch();
+    let git_status = get_git_status();
 
     let os_icon = if cfg!(target_os = "macos") {
         ""
@@ -39,18 +48,55 @@ pub fn get_prompt(last_duration: Option<Duration>, last_status: Option<i32>) -> 
     let trans1 = format!("\x1b[38;5;238m{}\u{e0b0}", seg2_bg);
     let seg2_text = format!("{} 📁 {} ", seg2_fg, cwd);
 
-    let (seg3_text, last_bg_fg) = match git_branch {
-        Some(branch) => {
-            let git_bg = "\x1b[48;5;141m";
+    let (seg3_text, last_bg_fg) = match git_status {
+        Some(gs) => {
+            let is_dirty = gs.dirty || gs.untracked;
+            let git_bg = if is_dirty {
+                "\x1b[48;5;178m" // Amber/Gold if dirty
+            } else {
+                "\x1b[48;5;141m" // Purple if clean
+            };
+            let git_fg = "\x1b[1;38;5;232m";
             let trans2 = format!("\x1b[38;5;75m{}\u{e0b0}", git_bg);
-            let git_content = format!("{}\x1b[1;38;5;232m  {} ", git_bg, branch);
-            (format!("{}{}", trans2, git_content), "\x1b[38;5;141m")
+
+            let mut flags = String::new();
+            if gs.dirty {
+                flags.push('*');
+            }
+            if gs.untracked {
+                flags.push('?');
+            }
+            if gs.ahead > 0 {
+                flags.push_str(&format!(" ⇡{}", gs.ahead));
+            }
+            if gs.behind > 0 {
+                flags.push_str(&format!(" ⇣{}", gs.behind));
+            }
+
+            let flag_str = if flags.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", flags)
+            };
+
+            let git_content = format!("{}{}  {}{} ", git_bg, git_fg, gs.branch, flag_str);
+            (
+                format!("{}{}", trans2, git_content),
+                if is_dirty {
+                    "\x1b[38;5;178m"
+                } else {
+                    "\x1b[38;5;141m"
+                },
+            )
         }
         None => (String::new(), "\x1b[38;5;75m"),
     };
 
     let left_bar_end = format!("\x1b[0m{}\u{e0b0}\x1b[0m", last_bg_fg);
-    let left_bar = format!("{}{}{}{}{}", seg1_text, trans1, seg2_text, seg3_text, left_bar_end);
+    let left_bar = format!(
+        "{}{}{}{}{}",
+        seg1_text, trans1, seg2_text, seg3_text, left_bar_end
+    );
 
     let status_badge = match last_status {
         Some(code) if code != 0 => {
@@ -60,9 +106,12 @@ pub fn get_prompt(last_duration: Option<Duration>, last_status: Option<i32>) -> 
     };
 
     let duration_badge = match last_duration {
-        Some(d) if d.as_secs() >= 1 => {
+        Some(d) if d.as_millis() >= 500 => {
             let duration_str = format_duration(d);
-            format!("\x1b[48;5;215m\x1b[1;38;5;232m took {} ⌛ \x1b[0m", duration_str)
+            format!(
+                "\x1b[48;5;215m\x1b[1;38;5;232m took {} ⌛ \x1b[0m",
+                duration_str
+            )
         }
         _ => String::new(),
     };
@@ -82,7 +131,8 @@ pub fn get_prompt(last_duration: Option<Duration>, last_status: Option<i32>) -> 
     let right_len = if right_badges.is_empty() {
         0
     } else {
-        strip_ansi(&right_badges).chars().count() + (if right_badges.contains('⌛') { 1 } else { 0 })
+        strip_ansi(&right_badges).chars().count()
+            + (if right_badges.contains('⌛') { 1 } else { 0 })
     };
 
     let line1 = if !right_badges.is_empty() && term_width > (left_len + right_len + 2) {
@@ -121,19 +171,75 @@ fn strip_ansi(input: &str) -> String {
     result
 }
 
-fn get_git_branch() -> Option<String> {
+fn get_git_status() -> Option<GitStatus> {
     let output = Command::new("git")
-        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .args(["status", "--porcelain=v1", "-b"])
         .output()
         .ok()?;
 
-    if output.status.success() {
-        let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if !branch.is_empty() {
-            return Some(branch);
+    if !output.status.success() {
+        return None;
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut lines = text.lines();
+    let branch_line = lines.next()?;
+
+    if !branch_line.starts_with("## ") {
+        return None;
+    }
+
+    let branch_part = &branch_line[3..];
+    let (branch_name, ahead, behind) = parse_branch_header(branch_part);
+
+    let mut dirty = false;
+    let mut untracked = false;
+
+    for line in lines {
+        if line.starts_with("??") {
+            untracked = true;
+        } else if !line.trim().is_empty() {
+            dirty = true;
         }
     }
-    None
+
+    Some(GitStatus {
+        branch: branch_name,
+        dirty,
+        untracked,
+        ahead,
+        behind,
+    })
+}
+
+fn parse_branch_header(header: &str) -> (String, u32, u32) {
+    let mut ahead = 0;
+    let mut behind = 0;
+
+    let branch_spec = if let Some((name_part, flags_part)) = header.split_once(" [") {
+        let flags = flags_part.trim_end_matches(']');
+        for part in flags.split(',') {
+            let trimmed = part.trim();
+            if let Some(num_str) = trimmed.strip_prefix("ahead ") {
+                ahead = num_str.parse().unwrap_or(0);
+            } else if let Some(num_str) = trimmed.strip_prefix("behind ") {
+                behind = num_str.parse().unwrap_or(0);
+            }
+        }
+        name_part
+    } else {
+        header
+    };
+
+    let branch_name = if let Some((local, _)) = branch_spec.split_once("...") {
+        local.to_string()
+    } else if branch_spec.starts_with("HEAD (no branch") {
+        ":detached".to_string()
+    } else {
+        branch_spec.to_string()
+    };
+
+    (branch_name, ahead, behind)
 }
 
 fn format_duration(d: Duration) -> String {
@@ -142,7 +248,29 @@ fn format_duration(d: Duration) -> String {
         let mins = secs / 60;
         let rem_secs = secs % 60;
         format!("{}m {}s", mins, rem_secs)
-    } else {
+    } else if secs >= 10 {
         format!("{}s", secs)
+    } else if secs >= 1 {
+        let tenths = d.subsec_millis() / 100;
+        format!("{}.{}s", secs, tenths)
+    } else {
+        format!("{}ms", d.as_millis())
     }
+}
+
+/// Reads ~/.bnb_history lines in reverse chronological order for Ctrl+R Fuzzy Search
+pub fn load_history_entries() -> Vec<String> {
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return Vec::new(),
+    };
+
+    let history_path = home.join(".bnb_history");
+    if !history_path.exists() {
+        return Vec::new();
+    }
+
+    fs::read_to_string(history_path)
+        .map(|data| data.lines().rev().map(|s| s.to_string()).collect())
+        .unwrap_or_default()
 }

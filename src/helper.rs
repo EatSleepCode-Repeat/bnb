@@ -46,7 +46,25 @@ impl Completer for BnbHelper {
         let mut matches = Vec::new();
 
         if is_command_pos && !current_word.contains('/') {
-            let builtins = ["cd", "export", "alias", "exit", "z"];
+            let builtins = [
+                "cd",
+                "export",
+                "unset",
+                "alias",
+                "unalias",
+                "which",
+                "type",
+                "source",
+                ".",
+                "history",
+                "echo",
+                "pwd",
+                "clear",
+                "exit",
+                "z",
+                "mkcd",
+                "bnb-update",
+            ];
             for b in builtins {
                 if b.starts_with(current_word) {
                     matches.push(Pair {
@@ -113,6 +131,20 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
             continue;
         }
 
+        if c == '&' && i + 1 < n && chars[i + 1] == '&' {
+            res.push(("&&".to_string(), TokenType::Operator));
+            i += 2;
+            is_first_word = true;
+            continue;
+        }
+
+        if c == '|' && i + 1 < n && chars[i + 1] == '|' {
+            res.push(("||".to_string(), TokenType::Operator));
+            i += 2;
+            is_first_word = true;
+            continue;
+        }
+
         if "|&;".contains(c) {
             res.push((c.to_string(), TokenType::Operator));
             i += 1;
@@ -122,7 +154,7 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
 
         if "><".contains(c) {
             let start = i;
-            if c == '>' && i + 1 < n && chars[i + 1] == '>' {
+            if c == '>' && i + 1 < n && (chars[i + 1] == '>' || chars[i + 1] == '&') {
                 i += 2;
             } else {
                 i += 1;
@@ -134,8 +166,19 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
         if c == '$' {
             let start = i;
             i += 1;
-            while i < n && (chars[i].is_alphanumeric() || chars[i] == '_') {
+            if i < n && (chars[i] == '?' || chars[i] == '$') {
                 i += 1;
+            } else if i < n && chars[i] == '{' {
+                while i < n && chars[i] != '}' {
+                    i += 1;
+                }
+                if i < n {
+                    i += 1;
+                }
+            } else {
+                while i < n && (chars[i].is_alphanumeric() || chars[i] == '_') {
+                    i += 1;
+                }
             }
             res.push((chars[start..i].iter().collect(), TokenType::EnvVar));
             is_first_word = false;
@@ -175,7 +218,7 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
 }
 
 fn is_valid_cmd(cmd: &str) -> bool {
-    if matches!(cmd, "cd" | "export" | "alias" | "exit" | "z") {
+    if crate::builtins::is_builtin(cmd) {
         return true;
     }
     if crate::builtins::alias::resolve(cmd).is_some() {
