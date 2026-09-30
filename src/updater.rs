@@ -6,7 +6,7 @@ use std::process::Command;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const DAY_IN_SECS: u64 = 86400;
 
 fn get_cache_file() -> Option<PathBuf> {
@@ -95,6 +95,10 @@ pub fn print_update_banner_if_available() {
             }
         }
     }
+}
+
+pub fn print_version() {
+    println!("\x1b[1;36mbnb-shell\x1b[0m v{}", CURRENT_VERSION);
 }
 
 pub fn run_update() -> Result<(), String> {
