@@ -1,8 +1,8 @@
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
-use rustyline::validate::Validator;
-use rustyline::{Context, Helper};
+use rustyline::validate::{ValidationContext, ValidationResult, Validator};
+use rustyline::{Context, Helper, Result};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::env;
@@ -39,9 +39,12 @@ impl Completer for BnbHelper {
             .unwrap_or(0);
 
         let current_word = &line_up_to_pos[word_start..];
-        let is_command_pos = !line_up_to_pos[..word_start]
-            .trim()
-            .contains(|c: char| !c.is_whitespace());
+        let command_prefix = line_up_to_pos[..word_start].trim_end();
+        let is_command_pos = command_prefix.trim().is_empty()
+            || command_prefix
+                .chars()
+                .last()
+                .is_some_and(|c| "|&;".contains(c));
 
         let mut matches = Vec::new();
 
@@ -64,6 +67,7 @@ impl Completer for BnbHelper {
                 "z",
                 "mkcd",
                 "bnb-update",
+                "undo",
             ];
             for b in builtins {
                 if b.starts_with(current_word) {
@@ -74,9 +78,18 @@ impl Completer for BnbHelper {
                 }
             }
 
+            for alias in crate::builtins::alias::names() {
+                if alias.starts_with(current_word) {
+                    matches.push(Pair {
+                        display: alias.clone(),
+                        replacement: alias,
+                    });
+                }
+            }
+
             if let Ok(path_var) = env::var("PATH") {
                 let mut seen = HashSet::new();
-                for dir in path_var.split(':') {
+                for dir in env::split_paths(&path_var) {
                     if let Ok(entries) = std::fs::read_dir(dir) {
                         for entry in entries.flatten() {
                             if let Ok(name) = entry.file_name().into_string() {
@@ -311,5 +324,13 @@ impl Hinter for BnbHelper {
     }
 }
 
-impl Validator for BnbHelper {}
+impl Validator for BnbHelper {
+    fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult> {
+        if crate::parser::is_incomplete(ctx.input()) {
+            Ok(ValidationResult::Incomplete)
+        } else {
+            Ok(ValidationResult::Valid(None))
+        }
+    }
+}
 impl Helper for BnbHelper {}

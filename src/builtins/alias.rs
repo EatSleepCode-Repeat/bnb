@@ -39,6 +39,14 @@ pub fn resolve(cmd: &str) -> Option<String> {
     }
 }
 
+pub fn names() -> Vec<String> {
+    let guard = ALIASES.lock().unwrap();
+    guard
+        .as_ref()
+        .map(|map| map.keys().cloned().collect())
+        .unwrap_or_default()
+}
+
 #[allow(dead_code)]
 pub fn run(args: &[String]) -> Result<(), String> {
     run_with_writer(args, &mut std::io::stdout())
