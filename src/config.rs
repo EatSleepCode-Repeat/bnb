@@ -10,24 +10,10 @@ fn get_home_dir() -> Option<PathBuf> {
 }
 
 pub fn load_config() -> Result<(), String> {
-    let mut errors = Vec::new();
     if let Some(home) = get_home_dir() {
-        let bnbrc = home.join(".bnbrc");
-        if let Err(error) = parse_if_present(&bnbrc) {
-            errors.push(error);
-        }
-
-        if cfg!(not(target_os = "windows")) {
-            let zshrc = home.join(".zshrc");
-            if let Err(error) = parse_if_present(&zshrc) {
-                errors.push(error);
-            }
-        }
-    }
-    if errors.is_empty() {
-        Ok(())
+        parse_if_present(&home.join(".bnbrc"))
     } else {
-        Err(errors.join("\n"))
+        Ok(())
     }
 }
 

@@ -16,7 +16,7 @@
 - **Pipelines and Redirection** — Supports conditional chaining (`&&`, `||`), sequencing (`;` and newlines), background launch (`&`), pipes (`|`), and common file redirections (`>`, `>>`, `<`, `2>`, `2>>`, `&>`).
 - **Expansion Support** — Supports tilde, unquoted simple wildcards (`*`, `?`), brace ranges (`{1..5}`, `{a..e}`), comma expansion (`{foo,bar}`), environment parameters (`$NAME`, `${NAME}`), common parameter defaults/length/prefix-suffix removal, exit status (`$?`), and process ID (`$$`). Quoted wildcard characters remain literal.
 - **Shell Assignments** — Supports persistent `NAME=value` assignments and temporary command-prefix assignments such as `EDITOR=vim command`.
-- **Config & Sourcing** — Uses `~/.bnbrc` as its native startup file and accepts simple `export KEY=VALUE` and `alias NAME=VALUE` statements. On macOS and Linux, it also reads the same limited subset from `~/.zshrc`, reporting unsupported lines instead of silently ignoring them. `~/.bashrc` is not loaded. `source` and `.` accept the same supported subset and do not execute arbitrary shell scripts.
+- **Config & Sourcing** — Loads only `~/.bnbrc` on startup and accepts simple `export KEY=VALUE` and `alias NAME=VALUE` statements. It does not read `~/.zshrc` or `~/.bashrc`. `source` and `.` can explicitly load a file containing the same supported subset; they do not execute arbitrary shell scripts.
 - **Explicit Safety Boundary** — Unsupported config lines are reported with file and line numbers, keeping the shell intentionally small and predictable instead of silently accepting unsupported zsh syntax.
 
 ---
@@ -116,7 +116,7 @@ source ~/.bnbrc
 
 ## Compatibility boundary
 
-bnb is zsh-inspired, not a zsh implementation. Quotes and escapes are checked, and common command composition and expansions are available, but unsupported config statements are reported with file and line numbers. Existing `.zshrc` files that initialize plugins or define shell functions are not fully interpreted; move supported aliases and exports to `.bnbrc` and review startup diagnostics.
+bnb is zsh-inspired, not a zsh implementation. Quotes and escapes are checked, and common command composition and expansions are available. Startup reads only `.bnbrc`; `.zshrc` is left to zsh. If you explicitly `source` a file, unsupported statements are reported with file and line numbers.
 
 The current shell does not implement command substitution, shell functions, arrays, loops/conditionals, process substitution, advanced zsh glob qualifiers/options, or full interactive job control. Parameter default operands are literal strings, and prefix/suffix removal supports literal matches rather than full zsh pattern expressions. Script files are processed one line at a time. Background launch is not equivalent to zsh job management. These boundaries are intentional; do not rely on bnb to run arbitrary zsh or bash scripts.
 
