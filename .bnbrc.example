@@ -1,5 +1,5 @@
-# System PATH setup
-export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
+# Add custom commands without replacing the inherited PATH
+export PATH="$HOME/.local/bin:$PATH"
 
 # Default Aliases
 alias ll="ls -la"

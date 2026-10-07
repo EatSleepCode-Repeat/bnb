@@ -21,8 +21,8 @@ use rustyline::config::Config;
 use rustyline::error::ReadlineError;
 use rustyline::history::DefaultHistory;
 use rustyline::{
-    Cmd, ConditionalEventHandler, Event, EventContext, EventHandler, KeyCode, KeyEvent, Modifiers,
-    Movement, Editor,
+    Cmd, ConditionalEventHandler, Editor, Event, EventContext, EventHandler, KeyCode, KeyEvent,
+    Modifiers, Movement,
 };
 
 fn ensure_system_path() {
@@ -58,22 +58,30 @@ fn ensure_system_path() {
     env::set_var("PATH", current_paths.join(":"));
 }
 
+fn load_startup_config() {
+    if let Err(error) = config::load_config() {
+        eprintln!("bnb: config: {}", error);
+    }
+}
+
 fn print_help() {
     println!("\x1b[1;36mbnb-shell\x1b[0m v{}", updater::CURRENT_VERSION);
-    println!("A fast, cross-platform terminal shell built in Rust with Powerlevel10k aesthetics.\n");
+    println!("A zsh-inspired Rust shell with explicit syntax and config support.\n");
 
     println!("\x1b[1;33mUSAGE:\x1b[0m");
     println!("    bnb [FLAGS] [SCRIPT_FILE]");
     println!("    bnb -c <COMMAND>\n");
 
     println!("\x1b[1;33mFLAGS:\x1b[0m");
-    println!("    \x1b[36m-c <CMD>\x1b[0m         Execute command string non-interactively and exit");
+    println!(
+        "    \x1b[36m-c <CMD>\x1b[0m         Execute command string non-interactively and exit"
+    );
     println!("    \x1b[36m-h, --help\x1b[0m       Print this help message and exit");
     println!("    \x1b[36m-V, --version\x1b[0m    Print version information and exit\n");
 
     println!("\x1b[1;33mKEY FEATURES:\x1b[0m");
     println!("    \x1b[36mCtrl+R\x1b[0m           Interactive TUI fuzzy history finder");
-    println!("    \x1b[36mGuardrails\x1b[0m       Destructive action interception & soft-delete staging");
+    println!("    \x1b[36mGuardrails\x1b[0m       Confirmation before recursive rm commands");
     println!("    \x1b[36mSmart Prompt\x1b[0m     Powerlevel10k status, Git tracking, and execution timing\n");
 
     println!("\x1b[1;33mCONFIG:\x1b[0m");
@@ -92,13 +100,22 @@ pub fn run_line(line: &str, mut last_status: i32) -> i32 {
     }
 
     let segments = parser::split_chains(trimmed);
+    if segments.is_empty()
+        || segments.iter().any(|(segment, _)| segment.is_empty())
+        || segments.last().is_some_and(|(_, next_op)| {
+            matches!(
+                next_op,
+                Some(parser::ast::ChainOp::And | parser::ast::ChainOp::Or)
+            )
+        })
+    {
+        eprintln!("bnb: syntax error: incomplete command chain");
+        return 2;
+    }
+
     let mut should_run = true;
 
     for (seg_str, next_op) in segments {
-        if seg_str.is_empty() {
-            continue;
-        }
-
         if should_run {
             match parser::parse_pipeline(&seg_str, last_status) {
                 Ok(pipeline) => {
@@ -109,7 +126,11 @@ pub fn run_line(line: &str, mut last_status: i32) -> i32 {
                         }
                         Err(e) => {
                             eprintln!("{}", e);
-                            last_status = 127;
+                            last_status = if e.starts_with("bnb: command not found:") {
+                                127
+                            } else {
+                                1
+                            };
                         }
                     }
                 }
@@ -165,10 +186,15 @@ impl ConditionalEventHandler for FuzzyHistoryHandler {
         _ctx: &EventContext<'_>,
     ) -> Option<Cmd> {
         let history = prompt::load_history_entries();
-        if let Some(selected) = tui::fuzzy::FuzzyFinder::select("History Search", &history) {
-            Some(Cmd::Replace(Movement::BeginningOfLine, Some(selected)))
-        } else {
-            Some(Cmd::Noop) // Do not fall back to default reverse search
+        match tui::fuzzy::FuzzyFinder::select("History Search", &history) {
+            Ok(Some(selected)) => {
+                Some(Cmd::Replace(Movement::BeginningOfLine, Some(selected)))
+            }
+            Ok(None) => Some(Cmd::Noop),
+            Err(error) => {
+                eprintln!("{}", error);
+                Some(Cmd::Noop)
+            }
         }
     }
 }
@@ -189,7 +215,7 @@ fn main() {
         if pos + 1 < args.len() {
             let cmd_str = &args[pos + 1];
             ensure_system_path();
-            config::load_config();
+            load_startup_config();
             ensure_system_path();
             let code = run_line(cmd_str, 0);
             std::process::exit(code);
@@ -208,7 +234,7 @@ fn main() {
     if let Some(&script_path) = non_flags.first() {
         if PathBuf::from(script_path).is_file() {
             ensure_system_path();
-            config::load_config();
+            load_startup_config();
             ensure_system_path();
             let code = run_script_file(script_path);
             std::process::exit(code);
@@ -216,7 +242,7 @@ fn main() {
     }
 
     ensure_system_path();
-    config::load_config();
+    load_startup_config();
     ensure_system_path();
 
     updater::check_for_updates_async();
@@ -240,6 +266,18 @@ fn main() {
     rl.bind_sequence(
         KeyEvent(KeyCode::Char('R'), Modifiers::CTRL),
         EventHandler::Conditional(Box::new(FuzzyHistoryHandler)),
+    );
+    rl.bind_sequence(
+        KeyEvent(KeyCode::Char('a'), Modifiers::CTRL),
+        EventHandler::Simple(Cmd::Move(Movement::BeginningOfLine)),
+    );
+    rl.bind_sequence(
+        KeyEvent(KeyCode::Char('e'), Modifiers::CTRL),
+        EventHandler::Simple(Cmd::Move(Movement::EndOfLine)),
+    );
+    rl.bind_sequence(
+        KeyEvent(KeyCode::Char('l'), Modifiers::CTRL),
+        EventHandler::Simple(Cmd::ClearScreen),
     );
 
     let history_file = env::var("HOME")
@@ -290,5 +328,22 @@ fn main() {
 
     if let Some(ref path) = history_file {
         let _ = rl.save_history(path);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_execution_reports_shell_status_codes() {
+        assert_eq!(run_line("bnb-no-such-command-92374", 0), 127);
+        assert_eq!(run_line("echo 'unfinished", 0), 2);
+        assert_eq!(run_line("false || true", 0), 0);
+    }
+
+    #[test]
+    fn trailing_sequence_separator_is_accepted() {
+        assert_eq!(run_line("true;", 0), 0);
     }
 }
