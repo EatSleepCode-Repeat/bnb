@@ -344,6 +344,7 @@ fn get_file_icon(path: &str) -> &'static str {
         || path.contains("Global Project Switcher")
         || path.contains("Git Status Stager")
         || path.contains("Configure Prompt Theme")
+        || path.contains("Configure Aliases")
         || path.contains("Visual Trash Vault")
         || path.contains("Reload Shell Config")
         || path.contains("Clear Terminal Screen")

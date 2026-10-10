@@ -28,6 +28,7 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "unset"
             | "alias"
             | "unalias"
+            | "alias-config"
             | "history"
             | "source"
             | "."
@@ -39,6 +40,7 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "prompt-config"
             | "exit"
             | "bnb-update"
+            | "cyberpunk"
     )
 }
 
@@ -67,6 +69,15 @@ pub fn execute_with_writer(
         "unset" => unset::run(args),
         "alias" => alias::run(args),
         "unalias" => unalias::run(args),
+        "alias-config" => match crate::tui::alias_manager::AliasManager::run() {
+            Ok(true) => {
+                writeln!(writer, "\x1b[1;32m✓ Aliases saved to ~/.bnbrc.\x1b[0m")
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            Ok(false) => Ok(()),
+            Err(e) => Err(e),
+        },
         "history" => history::run(args),
         "source" | "." => source::run(args),
         "which" | "type" => which::run(args),
@@ -75,6 +86,7 @@ pub fn execute_with_writer(
         "z" => z::run(args),
         "prompt-config" => prompt_config::run(),
         "exit" => exit::run(args),
+        "cyberpunk" => crate::tui::fireworks::run_fireworks(),
         "bnb-update" => run_bnb_update(),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
