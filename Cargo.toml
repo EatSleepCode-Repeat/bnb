@@ -1,6 +1,6 @@
 [package]
 name = "bnb-shell"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Chris Clines"]
 description = "A fast, polished, cross-platform terminal shell built in Rust with Powerlevel10k aesthetics."

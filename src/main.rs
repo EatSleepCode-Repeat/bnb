@@ -93,7 +93,7 @@ fn print_help() {
     println!("    \x1b[36m~/.bnbrc\x1b[0m         Loaded on startup (see .bnbrc.example)\n");
 
     println!("\x1b[1;33mBUILTINS:\x1b[0m");
-    println!("    alias, cd, clear, echo, exit, export, history, mkcd,");
+    println!("    alias, alias-config, cd, clear, cyberpunk, echo, exit, export, history, mkcd,");
     println!(
         "    prompt-config, pwd, source (.), type, unalias, undo, unset, which, z, bnb-update\n"
     );
@@ -198,6 +198,7 @@ fn get_command_candidates() -> Vec<String> {
         "export".into(),
         "unset".into(),
         "alias".into(),
+        "alias-config".into(),
         "unalias".into(),
         "history".into(),
         "source".into(),
@@ -206,6 +207,7 @@ fn get_command_candidates() -> Vec<String> {
         "undo".into(),
         "z".into(),
         "prompt-config".into(),
+        "cyberpunk".into(),
         "exit".into(),
         "bnb-update".into(),
         "git".into(),
@@ -550,6 +552,8 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             "🚀 Global Project Switcher (Ctrl+O)".to_string(),
             "📝 Git Status Stager (Ctrl+G)".to_string(),
             "⚙️ Configure Prompt Theme (Ctrl+T)".to_string(),
+            "⚡ Configure Aliases (alias-config)".to_string(),
+            "🎆 Cyberpunk Fireworks (cyberpunk)".to_string(),
             "🗑️ Visual Trash Vault (Ctrl+U)".to_string(),
             "🔄 Reload Shell Config (source ~/.bnbrc)".to_string(),
             "🧹 Clear Terminal Screen".to_string(),
@@ -572,6 +576,12 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     FuzzyGitStagerHandler.handle(_evt, _n, _positive, _ctx)
                 } else if selected.contains("Configure Prompt Theme") {
                     let _ = crate::tui::prompt_wizard::run_wizard();
+                    Some(Cmd::Noop)
+                } else if selected.contains("Configure Aliases") {
+                    let _ = crate::tui::alias_manager::AliasManager::run();
+                    Some(Cmd::Noop)
+                } else if selected.contains("Cyberpunk Fireworks") {
+                    let _ = crate::tui::fireworks::run_fireworks();
                     Some(Cmd::Noop)
                 } else if selected.contains("Visual Trash Vault") {
                     let _ = crate::tui::trash_vault::run_trash_vault();
