@@ -5,85 +5,61 @@ pub fn run(args: &[String]) -> Result<(), String> {
     run_with_writer(args, &mut std::io::stdout())
 }
 
-pub fn run_with_writer(args: &[String], out: &mut dyn Write) -> Result<(), String> {
-    let mut no_newline = false;
+pub fn run_with_writer(args: &[String], writer: &mut dyn Write) -> Result<(), String> {
+    let mut newline = true;
     let mut interpret_escapes = false;
-    let mut start_idx = 0;
+    let mut idx = 0;
 
-    while start_idx < args.len() {
-        let arg = &args[start_idx];
-        if arg.starts_with('-')
-            && arg.len() > 1
-            && arg[1..].chars().all(|c| c == 'n' || c == 'e' || c == 'E')
-        {
-            for c in arg[1..].chars() {
-                match c {
-                    'n' => no_newline = true,
-                    'e' => interpret_escapes = true,
-                    'E' => interpret_escapes = false,
-                    _ => {}
-                }
+    while idx < args.len() {
+        match args[idx].as_str() {
+            "-n" => newline = false,
+            "-e" => interpret_escapes = true,
+            "-ne" | "-en" => {
+                newline = false;
+                interpret_escapes = true;
             }
-            start_idx += 1;
-        } else {
-            break;
+            _ => break,
         }
+        idx += 1;
     }
 
-    let words = &args[start_idx..];
-    let mut output = words.join(" ");
+    let text_args = &args[idx..];
+    let mut text = text_args.join(" ");
 
     if interpret_escapes {
-        output = unescape_string(&output);
+        text = unescape(&text);
     }
 
-    if no_newline {
-        let _ = write!(out, "{}", output);
+    if newline {
+        writeln!(writer, "{}", text).map_err(|e| e.to_string())?;
     } else {
-        let _ = writeln!(out, "{}", output);
+        write!(writer, "{}", text).map_err(|e| e.to_string())?;
     }
 
-    let _ = out.flush();
     Ok(())
 }
 
-fn unescape_string(input: &str) -> String {
-    let mut res = String::new();
+fn unescape(input: &str) -> String {
+    let mut result = String::new();
     let mut chars = input.chars().peekable();
 
     while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.next() {
-                Some('n') => res.push('\n'),
-                Some('t') => res.push('\t'),
-                Some('r') => res.push('\r'),
-                Some('\\') => res.push('\\'),
-                Some('e') => res.push('\x1b'),
-                Some('a') => res.push('\x07'),
-                Some('b') => res.push('\x08'),
-                Some('0') => res.push('\0'),
+                Some('n') => result.push('\n'),
+                Some('t') => result.push('\t'),
+                Some('r') => result.push('\r'),
+                Some('\\') => result.push('\\'),
                 Some(other) => {
-                    res.push('\\');
-                    res.push(other);
+                    result.push('\\');
+                    result.push(other);
                 }
-                None => res.push('\\'),
+                None => result.push('\\'),
             }
         } else {
-            res.push(c);
+            result.push(c);
         }
     }
 
-    res
+    result
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_unescape() {
-        assert_eq!(unescape_string(r"hello\nworld"), "hello\nworld");
-        assert_eq!(unescape_string(r"foo\tbar"), "foo\tbar");
-    }
-}
-

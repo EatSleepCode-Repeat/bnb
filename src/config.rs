@@ -154,16 +154,38 @@ fn unescape_double_quoted(value: &str) -> String {
     out
 }
 
-fn validate_value(value: &str) -> Result<(), String> {
-    if value.contains('\0') {
-        return Err("NUL bytes are not valid in config values".into());
+pub fn validate_value(val: &str) -> Result<(), String> {
+    let trimmed = val.trim();
+
+    if trimmed.contains("$(")
+        || trimmed.contains('`')
+        || trimmed.contains('|')
+        || trimmed.contains(';')
+        || trimmed.contains("&&")
+        || trimmed.contains("||")
+    {
+        return Err(
+            "Command substitution and shell operators are not permitted in config lines"
+                .to_string(),
+        );
     }
-    if value.contains("$(") || value.contains('`') {
-        return Err("command substitution is not supported in config values".into());
+
+    // Validate that ${...} parameter expansions are properly closed
+    let mut chars = trimmed.chars().peekable();
+    let mut open_braces = 0;
+    while let Some(c) = chars.next() {
+        if c == '$' && chars.peek() == Some(&'{') {
+            chars.next();
+            open_braces += 1;
+        } else if c == '}' && open_braces > 0 {
+            open_braces -= 1;
+        }
     }
-    if value.contains("${") && !value.contains('}') {
-        return Err("unmatched parameter expansion".into());
+
+    if open_braces > 0 {
+        return Err("Unterminated parameter expansion in config line".to_string());
     }
+
     Ok(())
 }
 

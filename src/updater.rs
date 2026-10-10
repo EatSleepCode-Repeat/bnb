@@ -62,10 +62,7 @@ pub fn check_for_updates_async() {
                     let start = pos + 22;
                     if let Some(end) = response[start..].find('"') {
                         let latest_ver = &response[start..start + end];
-                        let _ = fs::write(
-                            &cache_file,
-                            format!("{}\n{}\n", now, latest_ver),
-                        );
+                        let _ = fs::write(&cache_file, format!("{}\n{}\n", now, latest_ver));
                     }
                 }
             }
@@ -101,6 +98,7 @@ pub fn print_version() {
     println!("\x1b[1;36mbnb-shell\x1b[0m v{}", CURRENT_VERSION);
 }
 
+#[allow(dead_code)]
 pub fn run_update() -> Result<(), String> {
     println!("\x1b[1;32m🚀 Upgrading bnb-shell to the latest version...\x1b[0m");
     let status = Command::new("cargo")
@@ -109,7 +107,9 @@ pub fn run_update() -> Result<(), String> {
         .map_err(|e| format!("bnb-update failed: {}", e))?;
 
     if status.success() {
-        println!("\x1b[1;32m✨ bnb-shell successfully updated! Restart your terminal to apply.\x1b[0m");
+        println!(
+            "\x1b[1;32m✨ bnb-shell successfully updated! Restart your terminal to apply.\x1b[0m"
+        );
         Ok(())
     } else {
         Err("bnb-update: cargo install failed".to_string())

@@ -1,11 +1,11 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Redirection {
-    OutputTruncate(String),   // >
-    OutputAppend(String),     // >>
-    Input(String),            // <
-    StderrTruncate(String),   // 2>
-    StderrAppend(String),     // 2>>
-    OutputAndStderr(String),  // &> or >&
+    OutputTruncate(String),  // >
+    OutputAppend(String),    // >>
+    Input(String),           // <
+    StderrTruncate(String),  // 2>
+    StderrAppend(String),    // 2>>
+    OutputAndStderr(String), // &> or >&
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

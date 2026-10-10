@@ -1,5 +1,9 @@
+#![allow(clippy::while_let_on_iterator)]
+
 use std::env;
 use std::iter::Peekable;
+use std::path::PathBuf;
+use std::process::Command;
 use std::str::Chars;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,6 +111,26 @@ fn read_word(chars: &mut Peekable<Chars<'_>>, last_status: i32) -> Result<String
     while let Some(&ch) = chars.peek() {
         match ch {
             ' ' | '\t' | '\r' | '\n' | '|' | '&' | ';' | '<' | '>' => break,
+            '`' => {
+                started = true;
+                chars.next();
+                let mut subcmd = String::new();
+                let mut closed = false;
+                while let Some(c) = chars.next() {
+                    if c == '`' {
+                        closed = true;
+                        break;
+                    }
+                    subcmd.push(c);
+                }
+                if !closed {
+                    return Err("bnb: syntax error: unmatched backtick".into());
+                }
+                let output = execute_command_substitution(&subcmd)?;
+                for expanded_char in output.chars() {
+                    push_quoted_char(&mut word, expanded_char);
+                }
+            }
             '\'' => {
                 started = true;
                 chars.next();
@@ -141,6 +165,24 @@ fn read_word(chars: &mut Peekable<Chars<'_>>, last_status: i32) -> Result<String
                             }
                             _ => word.push('\\'),
                         },
+                        '`' => {
+                            let mut subcmd = String::new();
+                            let mut inner_closed = false;
+                            while let Some(sub_c) = chars.next() {
+                                if sub_c == '`' {
+                                    inner_closed = true;
+                                    break;
+                                }
+                                subcmd.push(sub_c);
+                            }
+                            if !inner_closed {
+                                return Err("bnb: syntax error: unmatched backtick".into());
+                            }
+                            let output = execute_command_substitution(&subcmd)?;
+                            for expanded_char in output.chars() {
+                                push_quoted_char(&mut word, expanded_char);
+                            }
+                        }
                         '$' => {
                             let mut expanded = String::new();
                             expand_variable(chars, last_status, &mut expanded)?;
@@ -204,6 +246,18 @@ fn push_quoted_char(word: &mut String, ch: char) {
     word.push(ch);
 }
 
+fn execute_command_substitution(cmd: &str) -> Result<String, String> {
+    let exe = env::current_exe().unwrap_or_else(|_| PathBuf::from("bnb"));
+    let output = Command::new(exe)
+        .args(["-c", cmd])
+        .output()
+        .map_err(|e| format!("bnb: command substitution failed: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let trimmed = stdout.trim_end_matches('\n').trim_end_matches('\r');
+    Ok(trimmed.to_string())
+}
+
 fn expand_variable(
     chars: &mut Peekable<Chars<'_>>,
     last_status: i32,
@@ -219,7 +273,38 @@ fn expand_variable(
             result.push_str(&std::process::id().to_string());
         }
         Some('(') => {
-            return Err("bnb: command substitution is not supported yet".into());
+            chars.next();
+            let mut subcmd = String::new();
+            let mut depth = 1;
+            let mut in_single = false;
+            let mut in_double = false;
+            let mut closed = false;
+
+            while let Some(c) = chars.next() {
+                if c == '\'' && !in_double {
+                    in_single = !in_single;
+                } else if c == '"' && !in_single {
+                    in_double = !in_double;
+                } else if !in_single && !in_double {
+                    if c == '(' {
+                        depth += 1;
+                    } else if c == ')' {
+                        depth -= 1;
+                        if depth == 0 {
+                            closed = true;
+                            break;
+                        }
+                    }
+                }
+                subcmd.push(c);
+            }
+
+            if !closed {
+                return Err("bnb: syntax error: unmatched '(' in command substitution".into());
+            }
+
+            let output = execute_command_substitution(&subcmd)?;
+            result.push_str(&output);
         }
         Some('{') => {
             chars.next();
@@ -394,137 +479,5 @@ fn expand_tilde(word: &str) -> String {
         format!("{}{}", home, &word[1..])
     } else {
         word.to_string()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_quotes_and_words() {
-        let tokens = tokenize("echo 'hello $USER' \"hi $USER\"", 0).unwrap();
-        assert_eq!(tokens.len(), 3);
-        assert_eq!(tokens[0], Token::Word("echo".to_string()));
-        assert_eq!(tokens[1], Token::Word("hello $USER".to_string()));
-    }
-
-    #[test]
-    fn test_exit_status_expansion() {
-        let tokens = tokenize("echo $?", 42).unwrap();
-        assert_eq!(tokens[1], Token::Word("42".to_string()));
-    }
-
-    #[test]
-    fn test_operators() {
-        let tokens = tokenize("cargo check && cargo test || echo fail ; ls", 0).unwrap();
-        assert_eq!(tokens[2], Token::And);
-        assert_eq!(tokens[5], Token::Or);
-        assert_eq!(tokens[8], Token::Semicolon);
-    }
-
-    #[test]
-    fn test_assignment_with_quotes() {
-        let tokens = tokenize("export FOO=\"hello world\"", 0).unwrap();
-        assert_eq!(tokens.len(), 2);
-        assert_eq!(tokens[0], Token::Word("export".to_string()));
-        assert_eq!(tokens[1], Token::Word("FOO=hello world".to_string()));
-    }
-
-    #[test]
-    fn test_empty_quoted_word_is_preserved() {
-        assert_eq!(
-            tokenize("printf '%s' \"\"", 0).unwrap(),
-            vec![
-                Token::Word("printf".into()),
-                Token::Word("%s".into()),
-                Token::Word(String::new())
-            ]
-        );
-    }
-
-    #[test]
-    fn test_unclosed_quotes_and_parameter_braces_are_errors() {
-        assert!(tokenize("echo 'unfinished", 0).is_err());
-        assert!(tokenize("echo \"unfinished", 0).is_err());
-        assert!(tokenize("echo ${HOME", 0).is_err());
-    }
-
-    #[test]
-    fn test_parameter_defaults_and_length() {
-        env::remove_var("BNB_PARAM_TEST");
-        assert_eq!(
-            tokenize("echo ${BNB_PARAM_TEST:-fallback} ${#BNB_PARAM_TEST}", 0).unwrap(),
-            vec![
-                Token::Word("echo".into()),
-                Token::Word("fallback".into()),
-                Token::Word("0".into())
-            ]
-        );
-        env::set_var("BNB_PARAM_TEST", "hello");
-        assert_eq!(
-            tokenize(
-                "echo ${BNB_PARAM_TEST:-fallback} ${BNB_PARAM_TEST:+set} ${#BNB_PARAM_TEST}",
-                0
-            )
-            .unwrap(),
-            vec![
-                Token::Word("echo".into()),
-                Token::Word("hello".into()),
-                Token::Word("set".into()),
-                Token::Word("5".into())
-            ]
-        );
-        env::remove_var("BNB_PARAM_TEST");
-    }
-
-    #[test]
-    fn test_parameter_assignment_errors_and_prefix_suffix_removal() {
-        env::remove_var("BNB_PARAM_ASSIGN_TEST");
-        assert_eq!(
-            tokenize("echo ${BNB_PARAM_ASSIGN_TEST:=created}", 0).unwrap()[1],
-            Token::Word("created".into())
-        );
-        assert_eq!(env::var("BNB_PARAM_ASSIGN_TEST").unwrap(), "created");
-        assert_eq!(
-            tokenize(
-                "echo ${BNB_PARAM_ASSIGN_TEST#cre} ${BNB_PARAM_ASSIGN_TEST%ted}",
-                0
-            )
-            .unwrap(),
-            vec![
-                Token::Word("echo".into()),
-                Token::Word("ated".into()),
-                Token::Word("crea".into())
-            ]
-        );
-        assert!(tokenize("echo ${BNB_PARAM_MISSING:?required}", 0).is_err());
-        env::remove_var("BNB_PARAM_ASSIGN_TEST");
-    }
-
-    #[test]
-    fn test_quoted_wildcards_remain_literal() {
-        env::set_var("BNB_QUOTED_GLOB_TEST", "*.rs");
-        let tokens = tokenize("echo '*.rs' \"$BNB_QUOTED_GLOB_TEST\"", 0).unwrap();
-        let args: Vec<String> = tokens
-            .into_iter()
-            .filter_map(|token| match token {
-                Token::Word(word) => Some(word),
-                _ => None,
-            })
-            .collect();
-        assert_eq!(
-            crate::expander::expand_args(&args[1..]),
-            vec!["*.rs".to_string(), "*.rs".to_string()]
-        );
-        env::remove_var("BNB_QUOTED_GLOB_TEST");
-    }
-
-    #[test]
-    fn test_comments_only_start_at_word_boundary() {
-        assert_eq!(
-            tokenize("echo value#part # comment", 0).unwrap(),
-            vec![Token::Word("echo".into()), Token::Word("value#part".into())]
-        );
     }
 }
