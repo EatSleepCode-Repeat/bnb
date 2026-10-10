@@ -11,6 +11,7 @@
   - **Visual Trash Vault (`Ctrl+U`)** — Interactive modal displaying soft-deleted files, sizes, and timestamps. Select individual or multiple items (`Tab`/`Space`) to restore or permanently purge.
   - **History Search (`Ctrl+R`)** — Fuzzy search and select past commands from shell history.
   - **Fuzzy File Finder (`Ctrl+F`)** — Search project files recursively (skipping `.git`, `node_modules`, `target`, etc.) and insert paths directly into your active prompt.
+  - **Directory Overview (command palette)** — Browse the current directory in a two-pane view, preview folders and text files, change into a chosen folder, or insert a file path into your prompt.
   - **Git Branch Switcher (`Ctrl+B`)** — Inspect local (`🌿`) and remote (`🌐`) branches and switch branches effortlessly.
   - **Multi-Select Git Stager (`Ctrl+G`)** — Visual status TUI allowing bulk file staging (`git add`) and unstaging (`git restore --staged`) using checkbox selection.
   - **Global Project Switcher (`Ctrl+O`)** — Scans your system for local Git repositories and enables instant directory hopping.
