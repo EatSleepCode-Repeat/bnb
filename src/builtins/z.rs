@@ -114,6 +114,25 @@ fn calculate_rank(weight: f64, time: u64, now: u64) -> f64 {
     }
 }
 
+pub fn get_ranked_directories() -> Vec<String> {
+    let entries = load_entries();
+    let now = now_secs();
+    let mut ranked: Vec<(f64, String)> = entries
+        .into_iter()
+        .filter_map(|e| {
+            if Path::new(&e.path).exists() {
+                let rank = calculate_rank(e.weight, e.time, now);
+                Some((rank, e.path))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    ranked.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    ranked.into_iter().map(|(_, path)| path).collect()
+}
+
 fn change_to_path(target: &str) -> Result<(), String> {
     let path = PathBuf::from(target);
     let old_pwd = env::current_dir().ok();

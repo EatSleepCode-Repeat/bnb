@@ -1,3 +1,5 @@
+pub mod trash;
+
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};

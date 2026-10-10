@@ -101,6 +101,7 @@ pub fn print_version() {
     println!("\x1b[1;36mbnb-shell\x1b[0m v{}", CURRENT_VERSION);
 }
 
+#[allow(dead_code)]
 pub fn run_update() -> Result<(), String> {
     println!("\x1b[1;32m🚀 Upgrading bnb-shell to the latest version...\x1b[0m");
     let status = Command::new("cargo")

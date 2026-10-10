@@ -5,7 +5,9 @@ pub mod echo;
 pub mod exit;
 pub mod export;
 pub mod history;
+pub mod prompt_config;
 pub mod pwd;
+pub mod rm;
 pub mod source;
 pub mod unalias;
 pub mod undo;
@@ -13,71 +15,88 @@ pub mod unset;
 pub mod which;
 pub mod z;
 
-use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
 
 pub fn is_builtin(cmd: &str) -> bool {
     matches!(
         cmd,
-        "cd" | "export"
+        "cd" | "mkcd"
+            | "pwd"
+            | "clear"
+            | "echo"
+            | "export"
             | "unset"
             | "alias"
             | "unalias"
-            | "which"
-            | "type"
+            | "history"
             | "source"
             | "."
-            | "history"
-            | "echo"
-            | "pwd"
-            | "clear"
-            | "exit"
-            | "z"
-            | "mkcd"
-            | "bnb-update"
+            | "which"
+            | "type"
             | "undo"
+            | "rm"
+            | "z"
+            | "prompt-config"
+            | "exit"
+            | "bnb-update"
     )
 }
 
-#[allow(dead_code)]
-pub fn execute(cmd: &str, args: &[String]) -> Result<(), String> {
-    execute_with_writer(cmd, args, &mut std::io::stdout())
-}
-
-pub fn execute_with_writer(cmd: &str, args: &[String], out: &mut dyn Write) -> Result<(), String> {
+pub fn execute_with_writer<W: Write + ?Sized>(
+    cmd: &str,
+    args: &[String],
+    _writer: &mut W,
+) -> Result<(), String> {
     match cmd {
         "cd" => cd::run(args),
-        "export" => export::run_with_writer(args, out),
+        "mkcd" => {
+            if args.is_empty() {
+                return Err("mkcd: missing directory argument".to_string());
+            }
+            std::fs::create_dir_all(&args[0])
+                .map_err(|e| format!("mkcd: {}: {}", args[0], e))?;
+            cd::run(args)
+        }
+        "pwd" => pwd::run(args),
+        "clear" => clear::run(args),
+        "echo" => echo::run(args),
+        "export" => export::run(args),
         "unset" => unset::run(args),
-        "alias" => alias::run_with_writer(args, out),
+        "alias" => alias::run(args),
         "unalias" => unalias::run(args),
-        "which" | "type" => which::run_with_writer(args, out),
+        "history" => history::run(args),
         "source" | "." => source::run(args),
-        "history" => history::run_with_writer(args, out),
-        "echo" => echo::run_with_writer(args, out),
-        "pwd" => pwd::run_with_writer(args, out),
-        "clear" => clear::run_with_writer(args, out),
-        "exit" => exit::run(args),
+        "which" | "type" => which::run(args),
+        "undo" => undo::run(args),
+        "rm" => rm::run(args),
         "z" => z::run(args),
-        "mkcd" => run_mkcd(args),
-        "bnb-update" => crate::updater::run_update(),
-        "undo" => undo::run().map_err(|e| format!("undo: {}", e)),
+        "prompt-config" => prompt_config::run(),
+        "exit" => exit::run(args),
+        "bnb-update" => run_bnb_update(),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
 }
 
-fn run_mkcd(args: &[String]) -> Result<(), String> {
-    if args.is_empty() {
-        return Err("mkcd: missing directory operand".to_string());
+#[allow(dead_code)]
+pub fn dispatch(cmd: &str, args: &[String]) -> Option<Result<(), String>> {
+    if is_builtin(cmd) {
+        Some(execute_with_writer(cmd, args, &mut std::io::stdout()))
+    } else {
+        None
     }
+}
 
-    let expanded = crate::expander::expand_args(args);
-    let target = &expanded[0];
-    let path = PathBuf::from(target);
+fn run_bnb_update() -> Result<(), String> {
+    println!("\x1b[1;36mChecking for bnb updates...\x1b[0m");
+    let status = std::process::Command::new("cargo")
+        .args(["install", "bnb-shell", "--force"])
+        .status()
+        .map_err(|e| format!("Failed to run cargo install: {}", e))?;
 
-    fs::create_dir_all(&path)
-        .map_err(|e| format!("mkcd: failed to create {}: {}", target, e))?;
-
-    cd::run(std::slice::from_ref(target))
+    if status.success() {
+        println!("\x1b[1;32mSuccessfully updated bnb!\x1b[0m");
+        Ok(())
+    } else {
+        Err("Failed to update bnb via cargo install.".to_string())
+    }
 }

@@ -158,9 +158,6 @@ fn validate_value(value: &str) -> Result<(), String> {
     if value.contains('\0') {
         return Err("NUL bytes are not valid in config values".into());
     }
-    if value.contains("$(") || value.contains('`') {
-        return Err("command substitution is not supported in config values".into());
-    }
     if value.contains("${") && !value.contains('}') {
         return Err("unmatched parameter expansion".into());
     }
