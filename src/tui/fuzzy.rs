@@ -1,6 +1,8 @@
 use crossterm::{
     event::{self, Event, KeyCode, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,
+    },
     ExecutableCommand,
 };
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -122,12 +124,10 @@ impl FuzzyFinder {
 
             write!(
                 stdout,
-                "\x1b[2J\x1b[1;1H\x1b[38;5;244m╭{}\x1b[1;36m{}\x1b[0m\x1b[38;5;244m{}\x1b[1;33m{}\x1b[0m\x1b[38;5;244m{}╮\r\n",
-                "─",
+                "\x1b[2J\x1b[1;1H\x1b[38;5;244m╭─\x1b[1;36m{}\x1b[0m\x1b[38;5;244m{}\x1b[1;33m{}\x1b[0m\x1b[38;5;244m─╮\r\n",
                 title_line,
                 "─".repeat(title_fill),
-                header_badge,
-                "─"
+                header_badge
             )
             .map_err(|e| format!("fuzzy finder: terminal write failed: {}", e))?;
 
@@ -136,9 +136,7 @@ impl FuzzyFinder {
             } else {
                 &query
             };
-            let query_padding = " ".repeat(
-                content_width.saturating_sub(truncated_query.len() + 3)
-            );
+            let query_padding = " ".repeat(content_width.saturating_sub(truncated_query.len() + 3));
 
             write!(
                 stdout,
@@ -160,13 +158,8 @@ impl FuzzyFinder {
                 let is_selected = actual_index == selected;
                 let is_checked = selected_set.contains(*item);
 
-                let rendered_line = render_item_line(
-                    item,
-                    indices,
-                    is_selected,
-                    is_checked,
-                    content_width,
-                );
+                let rendered_line =
+                    render_item_line(item, indices, is_selected, is_checked, content_width);
 
                 write!(
                     stdout,
@@ -190,8 +183,7 @@ impl FuzzyFinder {
             let footer_fill = box_width.saturating_sub(footer_text.len() + 2);
             write!(
                 stdout,
-                "\x1b[38;5;244m╰{}\x1b[38;5;248m{}\x1b[0m\x1b[38;5;244m{}╯\r\n",
-                "─",
+                "\x1b[38;5;244m╰─\x1b[38;5;248m{}\x1b[0m\x1b[38;5;244m{}╯\r\n",
                 footer_text,
                 "─".repeat(footer_fill)
             )
@@ -201,8 +193,8 @@ impl FuzzyFinder {
                 .flush()
                 .map_err(|e| format!("fuzzy finder: terminal flush failed: {}", e))?;
 
-            let event = event::read()
-                .map_err(|e| format!("fuzzy finder: terminal input failed: {}", e))?;
+            let event =
+                event::read().map_err(|e| format!("fuzzy finder: terminal input failed: {}", e))?;
             if let Event::Key(key) = event {
                 match (key.code, key.modifiers) {
                     (KeyCode::Esc, _) => break,
@@ -259,19 +251,19 @@ impl FuzzyFinder {
     }
 }
 
-fn visual_width(s: &str) -> usize {
+pub fn visual_width(s: &str) -> usize {
     let mut w = 0;
     for c in s.chars() {
         if c == '\u{fe0f}' {
-            continue; // Variation selector-16 doesn't add width
+            continue;
         }
-        if (c >= '\u{1F300}' && c <= '\u{1F9FF}')
-            || (c >= '\u{2600}' && c <= '\u{26FF}')
-            || (c >= '\u{2700}' && c <= '\u{27BF}')
-            || (c >= '\u{1F000}' && c <= '\u{1F02F}')
-            || (c >= '\u{1F0A0}' && c <= '\u{1F0FF}')
-            || (c >= '\u{1F100}' && c <= '\u{1F6FF}')
-            || (c >= '\u{2300}' && c <= '\u{23FF}')
+        if ('\u{1F300}'..='\u{1F9FF}').contains(&c)
+            || ('\u{2600}'..='\u{26FF}').contains(&c)
+            || ('\u{2700}'..='\u{27BF}').contains(&c)
+            || ('\u{1F000}'..='\u{1F02F}').contains(&c)
+            || ('\u{1F0A0}'..='\u{1F0FF}').contains(&c)
+            || ('\u{1F100}'..='\u{1F6FF}').contains(&c)
+            || ('\u{2300}'..='\u{23FF}').contains(&c)
         {
             w += 2;
         } else {

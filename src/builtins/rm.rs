@@ -40,13 +40,19 @@ pub fn run(args: &[String]) -> Result<(), String> {
 
         if !path.exists() {
             if !force {
-                eprintln!("rm: cannot remove '{}': No such file or directory", target_str);
+                eprintln!(
+                    "rm: cannot remove '{}': No such file or directory",
+                    target_str
+                );
             }
             continue;
         }
 
         if path.is_dir() && !recursive {
-            return Err(format!("rm: cannot remove '{}': Is a directory", target_str));
+            return Err(format!(
+                "rm: cannot remove '{}': Is a directory",
+                target_str
+            ));
         }
 
         if let Err(e) = crate::safety::trash::move_to_trash(&path) {

@@ -7,8 +7,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
 }
 
 pub fn run_with_writer(_args: &[String], out: &mut dyn Write) -> Result<(), String> {
-    let current = env::current_dir()
-        .map_err(|e| format!("pwd: error getting current directory: {}", e))?;
+    let current =
+        env::current_dir().map_err(|e| format!("pwd: error getting current directory: {}", e))?;
     let _ = writeln!(out, "{}", current.display());
     Ok(())
 }

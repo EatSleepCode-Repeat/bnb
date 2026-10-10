@@ -1,9 +1,12 @@
 use crate::safety::trash::{
     clear_trash, list_trash_entries, purge_entry, restore_entry, TrashEntry,
 };
+use crate::tui::fuzzy::visual_width;
 use crossterm::{
     event::{self, Event, KeyCode, KeyModifiers},
-    terminal::{disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen,
+    },
     ExecutableCommand,
 };
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -103,18 +106,16 @@ pub fn run_trash_vault() -> Result<(), String> {
             )
         };
 
-        let title_line = " 🗑️ Visual Trash Vault ";
-        let title_fill = box_width
-            .saturating_sub(title_line.len() + header_badge.len() + 2);
+        let title_line = " 🗑️ Visual Trash Vault ".to_string();
+        let title_fill =
+            box_width.saturating_sub(visual_width(&title_line) + visual_width(&header_badge) + 2);
 
         write!(
             stdout,
-            "\x1b[2J\x1b[1;1H\x1b[38;5;244m╭{}\x1b[1;36m{}\x1b[0m\x1b[38;5;244m{}\x1b[1;33m{}\x1b[0m\x1b[38;5;244m{}╮\r\n",
-            "─",
+            "\x1b[2J\x1b[1;1H\x1b[38;5;244m╭─\x1b[1;36m{}\x1b[0m\x1b[38;5;244m{}\x1b[1;33m{}\x1b[0m\x1b[38;5;244m─╮\r\n",
             title_line,
             "─".repeat(title_fill),
-            header_badge,
-            "─"
+            header_badge
         )
         .map_err(|e| e.to_string())?;
 
@@ -146,8 +147,12 @@ pub fn run_trash_vault() -> Result<(), String> {
             let is_checked = selected_ids.contains(&entry.id);
 
             let line = render_trash_line(entry, is_selected, is_checked, content_width);
-            write!(stdout, "\x1b[38;5;244m│\x1b[0m {}\x1b[38;5;244m │\r\n", line)
-                .map_err(|e| e.to_string())?;
+            write!(
+                stdout,
+                "\x1b[38;5;244m│\x1b[0m {}\x1b[38;5;244m │\r\n",
+                line
+            )
+            .map_err(|e| e.to_string())?;
         }
 
         let rendered_count = matches.iter().skip(scroll_offset).take(max_visible).count();
@@ -160,12 +165,11 @@ pub fn run_trash_vault() -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         }
 
-        let footer_text = " [Enter/r] Restore  [d] Purge  [c] Clear All  [Tab/Space] Select  [Esc] Exit ";
+        let footer_text = " [Enter] Restore   [Tab/Space] Select   [Shift+Del] Purge   [Esc] Exit ";
         let footer_fill = box_width.saturating_sub(footer_text.len() + 2);
         write!(
             stdout,
-            "\x1b[38;5;244m╰{}\x1b[38;5;248m{}\x1b[0m\x1b[38;5;244m{}╯\r\n",
-            "─",
+            "\x1b[38;5;244m╰─\x1b[38;5;248m{}\x1b[0m\x1b[38;5;244m{}╯\r\n",
             footer_text,
             "─".repeat(footer_fill)
         )
@@ -298,8 +302,7 @@ fn render_trash_line(
         raw_path
     };
 
-    let padding_needed =
-        max_width.saturating_sub(prefix_len + display_path.len() + meta_str.len());
+    let padding_needed = max_width.saturating_sub(prefix_len + display_path.len() + meta_str.len());
     let padding = " ".repeat(padding_needed);
 
     let check_mark = if is_checked {

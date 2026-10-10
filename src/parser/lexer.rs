@@ -1,3 +1,5 @@
+#![allow(clippy::while_let_on_iterator)]
+
 use std::env;
 use std::iter::Peekable;
 use std::path::PathBuf;

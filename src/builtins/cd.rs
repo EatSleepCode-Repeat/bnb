@@ -24,7 +24,10 @@ pub fn check_and_load_dotenv() {
                     }
                 }
                 if count > 0 {
-                    println!("\x1b[1;32m⚡ Auto-loaded {} variable(s) from .env\x1b[0m", count);
+                    println!(
+                        "\x1b[1;32m⚡ Auto-loaded {} variable(s) from .env\x1b[0m",
+                        count
+                    );
                 }
             }
         }

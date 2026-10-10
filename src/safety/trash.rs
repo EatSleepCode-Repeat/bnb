@@ -47,8 +47,13 @@ pub fn move_to_trash(target: &Path) -> Result<TrashEntry, String> {
     let trash_id = format!("{}_{}", timestamp_nano, file_name);
     let trash_file_path = trash_dir.join(&trash_id);
 
-    let metadata = fs::metadata(&abs_target)
-        .map_err(|e| format!("trash: cannot read metadata for {}: {}", target.display(), e))?;
+    let metadata = fs::metadata(&abs_target).map_err(|e| {
+        format!(
+            "trash: cannot read metadata for {}: {}",
+            target.display(),
+            e
+        )
+    })?;
 
     let is_dir = metadata.is_dir();
     let size_bytes = if is_dir {
@@ -168,8 +173,7 @@ fn save_all_entries(entries: &[TrashEntry]) -> Result<(), String> {
             entry.size_bytes
         ));
     }
-    fs::write(manifest_path, content)
-        .map_err(|e| format!("trash: cannot update manifest: {}", e))
+    fs::write(manifest_path, content).map_err(|e| format!("trash: cannot update manifest: {}", e))
 }
 
 pub fn restore_entry(entry: &TrashEntry) -> Result<(), String> {

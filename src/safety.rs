@@ -23,10 +23,15 @@ impl SafetyEngine {
         }
 
         let cmd = &args[0];
-        let has_recursive = args.iter().any(|a| a == "-r" || a == "-rf" || a == "-fr" || a == "-R");
+        let has_recursive = args
+            .iter()
+            .any(|a| a == "-r" || a == "-rf" || a == "-fr" || a == "-R");
 
         if cmd == "rm" && has_recursive {
-            println!("\x1b[33m⚠️  Guardrail: Recursive deletion requested for: {:?}\x1b[0m", &args[1..]);
+            println!(
+                "\x1b[33m⚠️  Guardrail: Recursive deletion requested for: {:?}\x1b[0m",
+                &args[1..]
+            );
             print!("Proceed with deletion? [y/N]: ");
             io::stdout().flush().ok();
 
@@ -40,9 +45,8 @@ impl SafetyEngine {
 
     /// Moves files to staging ~/.bnb/trash for soft-deletion support
     pub fn safe_remove(targets: &[String]) -> io::Result<()> {
-        let home = dirs::home_dir().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "Home directory not found")
-        })?;
+        let home = dirs::home_dir()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Home directory not found"))?;
         let trash_dir = home.join(".bnb/trash");
         fs::create_dir_all(&trash_dir)?;
 

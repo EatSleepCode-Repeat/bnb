@@ -94,7 +94,9 @@ fn print_help() {
 
     println!("\x1b[1;33mBUILTINS:\x1b[0m");
     println!("    alias, cd, clear, echo, exit, export, history, mkcd,");
-    println!("    prompt-config, pwd, source (.), type, unalias, undo, unset, which, z, bnb-update\n");
+    println!(
+        "    prompt-config, pwd, source (.), type, unalias, undo, unset, which, z, bnb-update\n"
+    );
 }
 
 pub fn run_line(line: &str, mut last_status: i32) -> i32 {
@@ -122,24 +124,22 @@ pub fn run_line(line: &str, mut last_status: i32) -> i32 {
     for (seg_str, next_op) in segments {
         if should_run {
             match parser::parse_pipeline(&seg_str, last_status) {
-                Ok(pipeline) => {
-                    match executor::process::run_pipeline(&pipeline) {
-                        Ok(code) => {
-                            last_status = code;
-                        }
-                        Err(e) => {
-                            eprintln!("{}", e);
-                            if e.starts_with("bnb: command not found:") {
-                                if let Some(corrected_line) = suggest_and_prompt_typo(trimmed, &e) {
-                                    return run_line(&corrected_line, last_status);
-                                }
-                                last_status = 127;
-                            } else {
-                                last_status = 1;
+                Ok(pipeline) => match executor::process::run_pipeline(&pipeline) {
+                    Ok(code) => {
+                        last_status = code;
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        if e.starts_with("bnb: command not found:") {
+                            if let Some(corrected_line) = suggest_and_prompt_typo(trimmed, &e) {
+                                return run_line(&corrected_line, last_status);
                             }
+                            last_status = 127;
+                        } else {
+                            last_status = 1;
                         }
                     }
-                }
+                },
                 Err(err) => {
                     eprintln!("{}", err);
                     last_status = 2;
@@ -172,8 +172,8 @@ fn levenshtein_distance(a: &str, b: &str) -> usize {
     for (i, row) in matrix.iter_mut().enumerate().take(len_a + 1) {
         row[0] = i;
     }
-    for j in 0..=len_b {
-        matrix[0][j] = j;
+    for (j, cell) in matrix[0].iter_mut().enumerate() {
+        *cell = j;
     }
 
     for (i, ca) in a.chars().enumerate() {
@@ -190,14 +190,44 @@ fn levenshtein_distance(a: &str, b: &str) -> usize {
 
 fn get_command_candidates() -> Vec<String> {
     let mut candidates = vec![
-        "cd".into(), "mkcd".into(), "pwd".into(), "clear".into(), "echo".into(),
-        "export".into(), "unset".into(), "alias".into(), "unalias".into(),
-        "history".into(), "source".into(), "which".into(), "type".into(),
-        "undo".into(), "z".into(), "prompt-config".into(), "exit".into(), "bnb-update".into(),
-        "git".into(), "cargo".into(), "rustc".into(), "code".into(), "vim".into(),
-        "nvim".into(), "docker".into(), "npm".into(), "node".into(), "python".into(),
-        "python3".into(), "make".into(), "grep".into(), "find".into(), "curl".into(),
-        "wget".into(), "ssh".into(), "brew".into(), "cat".into(), "ls".into(),
+        "cd".into(),
+        "mkcd".into(),
+        "pwd".into(),
+        "clear".into(),
+        "echo".into(),
+        "export".into(),
+        "unset".into(),
+        "alias".into(),
+        "unalias".into(),
+        "history".into(),
+        "source".into(),
+        "which".into(),
+        "type".into(),
+        "undo".into(),
+        "z".into(),
+        "prompt-config".into(),
+        "exit".into(),
+        "bnb-update".into(),
+        "git".into(),
+        "cargo".into(),
+        "rustc".into(),
+        "code".into(),
+        "vim".into(),
+        "nvim".into(),
+        "docker".into(),
+        "npm".into(),
+        "node".into(),
+        "python".into(),
+        "python3".into(),
+        "make".into(),
+        "grep".into(),
+        "find".into(),
+        "curl".into(),
+        "wget".into(),
+        "ssh".into(),
+        "brew".into(),
+        "cat".into(),
+        "ls".into(),
     ];
 
     if let Ok(path_var) = env::var("PATH") {
@@ -306,9 +336,7 @@ impl ConditionalEventHandler for FuzzyHistoryHandler {
     ) -> Option<Cmd> {
         let history = prompt::load_history_entries();
         match tui::fuzzy::FuzzyFinder::select("History Search", &history) {
-            Ok(Some(selected)) => {
-                Some(Cmd::Replace(Movement::BeginningOfLine, Some(selected)))
-            }
+            Ok(Some(selected)) => Some(Cmd::Replace(Movement::BeginningOfLine, Some(selected))),
             Ok(None) => Some(Cmd::Noop),
             Err(error) => {
                 eprintln!("{}", error);
@@ -330,9 +358,7 @@ impl ConditionalEventHandler for FuzzyFileHandler {
     ) -> Option<Cmd> {
         let files = tui::fuzzy::collect_files(10_000);
         match tui::fuzzy::FuzzyFinder::select("File Finder", &files) {
-            Ok(Some(selected)) => {
-                Some(Cmd::Replace(Movement::ForwardChar(0), Some(selected)))
-            }
+            Ok(Some(selected)) => Some(Cmd::Replace(Movement::ForwardChar(0), Some(selected))),
             Ok(None) => Some(Cmd::Noop),
             Err(error) => {
                 eprintln!("{}", error);
@@ -392,12 +418,10 @@ impl ConditionalEventHandler for FuzzyZDirectoryHandler {
         }
 
         match tui::fuzzy::FuzzyFinder::select("Directory Jumper (z)", &dirs) {
-            Ok(Some(selected)) => {
-                Some(Cmd::Replace(
-                    Movement::BeginningOfLine,
-                    Some(format!("cd \"{}\"", selected)),
-                ))
-            }
+            Ok(Some(selected)) => Some(Cmd::Replace(
+                Movement::BeginningOfLine,
+                Some(format!("cd \"{}\"", selected)),
+            )),
             Ok(None) => Some(Cmd::Noop),
             Err(error) => {
                 eprintln!("{}", error);

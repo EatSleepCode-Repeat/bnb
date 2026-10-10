@@ -177,8 +177,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .into_iter()
         .filter_map(|e| {
             let path_lower = e.path.to_lowercase();
-            let matches = query_terms.is_empty()
-                || query_terms.iter().all(|term| path_lower.contains(term));
+            let matches =
+                query_terms.is_empty() || query_terms.iter().all(|term| path_lower.contains(term));
             if matches {
                 let rank = calculate_rank(e.weight, e.time, now);
                 Some((rank, e.path))
@@ -199,7 +199,12 @@ pub fn run(args: &[String]) -> Result<(), String> {
         let count = ranked.len().min(10);
         println!("\x1b[1mRanked directory matches:\x1b[0m");
         for (i, (rank, path)) in ranked[..count].iter().enumerate() {
-            println!("  \x1b[1;36m{:2})\x1b[0m \x1b[33m[{:5.1}]\x1b[0m {}", i + 1, rank, path);
+            println!(
+                "  \x1b[1;36m{:2})\x1b[0m \x1b[33m[{:5.1}]\x1b[0m {}",
+                i + 1,
+                rank,
+                path
+            );
         }
         print!("\x1b[1mSelect [1-{}, q to cancel]: \x1b[0m", count);
         let _ = io::stdout().flush();

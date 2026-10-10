@@ -254,8 +254,10 @@ pub fn render_prompt_with_config(
                         flags.push_str(&format!(" ⇣{}", gs.behind));
                     }
 
-                    let git_content =
-                        format!("{}{} {}{}{} ", git_bg_code, git_fg, git_icon, gs.branch, flags);
+                    let git_content = format!(
+                        "{}{} {}{}{} ",
+                        git_bg_code, git_fg, git_icon, gs.branch, flags
+                    );
                     (
                         format!("{}{}", trans2, git_content),
                         format!("\x1b[38;5;{}m", git_bg_num),
@@ -317,7 +319,11 @@ pub fn render_prompt_with_config(
         format!("{}{}", left_bar, right_badges)
     };
 
-    let symbol = if config.symbol.is_empty() { "❯" } else { &config.symbol };
+    let symbol = if config.symbol.is_empty() {
+        "❯"
+    } else {
+        &config.symbol
+    };
     let prompt_arrow = if last_status.unwrap_or(0) != 0 {
         format!("\x1b[1;31m{}\x1b[0m ", symbol)
     } else {

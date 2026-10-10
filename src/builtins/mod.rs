@@ -42,10 +42,10 @@ pub fn is_builtin(cmd: &str) -> bool {
     )
 }
 
-pub fn execute_with_writer<W: Write + ?Sized>(
+pub fn execute_with_writer(
     cmd: &str,
     args: &[String],
-    _writer: &mut W,
+    writer: &mut dyn Write,
 ) -> Result<(), String> {
     match cmd {
         "cd" => cd::run(args),
@@ -53,13 +53,16 @@ pub fn execute_with_writer<W: Write + ?Sized>(
             if args.is_empty() {
                 return Err("mkcd: missing directory argument".to_string());
             }
-            std::fs::create_dir_all(&args[0])
-                .map_err(|e| format!("mkcd: {}: {}", args[0], e))?;
+            std::fs::create_dir_all(&args[0]).map_err(|e| format!("mkcd: {}: {}", args[0], e))?;
             cd::run(args)
         }
-        "pwd" => pwd::run(args),
+        "pwd" => {
+            let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+            writeln!(writer, "{}", cwd.display()).map_err(|e| e.to_string())?;
+            Ok(())
+        }
         "clear" => clear::run(args),
-        "echo" => echo::run(args),
+        "echo" => echo::run_with_writer(args, writer),
         "export" => export::run(args),
         "unset" => unset::run(args),
         "alias" => alias::run(args),
