@@ -547,6 +547,7 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
         let palette = vec![
             "🔍 History Search (Ctrl+R)".to_string(),
             "📄 Fuzzy File Finder (Ctrl+F)".to_string(),
+            "🗂️ Directory Overview".to_string(),
             "🌿 Git Branch Switcher (Ctrl+B)".to_string(),
             "📁 Directory Jumper (Ctrl+Z)".to_string(),
             "🚀 Global Project Switcher (Ctrl+O)".to_string(),
@@ -570,6 +571,26 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     FuzzyGitBranchHandler.handle(_evt, _n, _positive, _ctx)
                 } else if selected.contains("Directory Jumper") {
                     FuzzyZDirectoryHandler.handle(_evt, _n, _positive, _ctx)
+                } else if selected.contains("Directory Overview") {
+                    match tui::directory_browser::run_directory_browser() {
+                        Ok(Some(tui::directory_browser::Selection::Directory(path))) => {
+                            Some(Cmd::Replace(
+                                Movement::BeginningOfLine,
+                                Some(format!("cd {}", tui::directory_browser::quote_path(&path))),
+                            ))
+                        }
+                        Ok(Some(tui::directory_browser::Selection::File(path))) => {
+                            Some(Cmd::Replace(
+                                Movement::ForwardChar(0),
+                                Some(tui::directory_browser::quote_path(&path)),
+                            ))
+                        }
+                        Ok(None) => Some(Cmd::Noop),
+                        Err(error) => {
+                            eprintln!("{}", error);
+                            Some(Cmd::Noop)
+                        }
+                    }
                 } else if selected.contains("Global Project Switcher") {
                     FuzzyProjectHandler.handle(_evt, _n, _positive, _ctx)
                 } else if selected.contains("Git Status Stager") {
