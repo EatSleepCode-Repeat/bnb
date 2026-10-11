@@ -41,6 +41,7 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "exit"
             | "bnb-update"
             | "cyberpunk"
+            | "vault"
     )
 }
 
@@ -88,6 +89,7 @@ pub fn execute_with_writer(
         "exit" => exit::run(args),
         "cyberpunk" => crate::tui::fireworks::run_fireworks(),
         "bnb-update" => run_bnb_update(),
+        "vault" => crate::vault::run_vault_cli(args),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
 }

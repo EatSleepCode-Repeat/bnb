@@ -332,7 +332,25 @@ fn expand_variable(
                     break;
                 }
             }
-            result.push_str(&env::var(&var_name).unwrap_or_default());
+
+            // Check if variable is $vault:KEY or $vault.KEY
+            if var_name == "vault" && matches!(chars.peek(), Some(':') | Some('.')) {
+                chars.next(); // Consume ':' or '.'
+                let mut key_name = String::new();
+                while let Some(&next_c) = chars.peek() {
+                    if next_c.is_alphanumeric() || next_c == '_' || next_c == '-' {
+                        key_name.push(next_c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                if let Some(val) = crate::vault::get_secret(&key_name) {
+                    result.push_str(&val);
+                }
+            } else {
+                result.push_str(&env::var(&var_name).unwrap_or_default());
+            }
         }
         _ => result.push('$'),
     }
@@ -340,6 +358,16 @@ fn expand_variable(
 }
 
 fn expand_braced_parameter(expression: &str, last_status: i32) -> Result<String, String> {
+    if let Some(key) = expression
+        .strip_prefix("vault:")
+        .or_else(|| expression.strip_prefix("vault."))
+    {
+        if let Some(val) = crate::vault::get_secret(key) {
+            return Ok(val);
+        } else {
+            return Ok(String::new());
+        }
+    }
     if expression == "?" {
         return Ok(last_status.to_string());
     }

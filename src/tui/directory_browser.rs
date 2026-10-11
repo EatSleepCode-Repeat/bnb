@@ -223,13 +223,13 @@ fn render(
             )
         }?;
     }
-    for offset in end.saturating_sub(scroll_offset)..max_entries {
+    for preview_line in &preview[end.saturating_sub(scroll_offset)..max_entries] {
         write_line(
             stdout,
             format_args!(
                 "{} \x1b[38;5;244m│\x1b[0m {}",
                 " ".repeat(left_width),
-                truncate(&preview[offset], right_width)
+                truncate(preview_line, right_width)
             ),
         )?;
     }
@@ -282,7 +282,7 @@ fn preview_lines(entry: Option<&Entry>, max_rows: usize) -> Result<Vec<String>, 
                     error
                 )
             })?;
-        if bytes.iter().any(|byte| *byte == 0) {
+        if bytes.contains(&0) {
             lines.push("Binary file".to_string());
         } else {
             let text = String::from_utf8_lossy(&bytes);
