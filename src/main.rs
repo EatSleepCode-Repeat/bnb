@@ -6,6 +6,8 @@ mod helper;
 mod parser;
 mod prompt;
 mod updater;
+pub mod vault;
+mod workspace;
 
 pub mod safety;
 pub mod tui;
@@ -544,7 +546,20 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
         _positive: bool,
         _ctx: &EventContext<'_>,
     ) -> Option<Cmd> {
-        let palette = vec![
+        let mut palette = Vec::new();
+        let mut workspace_map = std::collections::HashMap::new();
+
+        // 1. Detect Stack-Aware Workspace Actions
+        if let Ok(pwd) = env::current_dir() {
+            let actions = crate::workspace::detect_workspace_actions(&pwd);
+            for action in actions {
+                palette.push(action.display_label.clone());
+                workspace_map.insert(action.display_label, action.command_to_run);
+            }
+        }
+
+        // 2. Standard Universal Palette Actions
+        let standard_actions = vec![
             "🔍 History Search (Ctrl+R)".to_string(),
             "📄 Fuzzy File Finder (Ctrl+F)".to_string(),
             "🗂️ Directory Overview".to_string(),
@@ -552,6 +567,7 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             "📁 Directory Jumper (Ctrl+Z)".to_string(),
             "🚀 Global Project Switcher (Ctrl+O)".to_string(),
             "📝 Git Status Stager (Ctrl+G)".to_string(),
+            "🔐 Secret Vault (vault list)".to_string(),
             "⚙️ Configure Prompt Theme (Ctrl+T)".to_string(),
             "⚡ Configure Aliases (alias-config)".to_string(),
             "🎆 Cyberpunk Fireworks (cyberpunk)".to_string(),
@@ -561,9 +577,16 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             "🚪 Exit Shell Session".to_string(),
         ];
 
+        palette.extend(standard_actions);
+
         match tui::fuzzy::FuzzyFinder::select("Command Palette", &palette) {
             Ok(Some(selected)) => {
-                if selected.contains("History Search") {
+                if let Some(cmd_to_run) = workspace_map.get(&selected) {
+                    Some(Cmd::Replace(
+                        Movement::BeginningOfLine,
+                        Some(cmd_to_run.clone()),
+                    ))
+                } else if selected.contains("History Search") {
                     FuzzyHistoryHandler.handle(_evt, _n, _positive, _ctx)
                 } else if selected.contains("Fuzzy File Finder") {
                     FuzzyFileHandler.handle(_evt, _n, _positive, _ctx)
@@ -606,6 +629,9 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     Some(Cmd::Noop)
                 } else if selected.contains("Visual Trash Vault") {
                     let _ = crate::tui::trash_vault::run_trash_vault();
+                    Some(Cmd::Noop)
+                } else if selected.contains("Secret Vault") {
+                    let _ = crate::vault::run_vault_cli(&["list".to_string()]);
                     Some(Cmd::Noop)
                 } else if selected.contains("Reload Shell Config") {
                     Some(Cmd::Replace(

@@ -1,6 +1,41 @@
-# Add custom commands without replacing the inherited PATH
-export PATH="$HOME/.local/bin:$PATH"
+# ==============================================================================
+# Environment Variables
+# ==============================================================================
+export PATH="/usr/local/bin:/usr/bin:/bin:$HOME/.cargo/bin:$HOME/bin"
+export EDITOR="nvim"
+export VISUAL="nvim"
+export PAGER="less"
+export LANG="en_US.UTF-8"
+export RUST_BACKTRACE=1
 
-# Default Aliases
+# ==============================================================================
+# Define persistent shortcuts (aliases)
+# ==============================================================================
+alias v="nvim"
+alias vim="nvim"
+alias vi="nvim"
 alias ll="ls -la"
+alias la="ls -a"
+alias l="ls -l"
+alias up="cd .."
+alias upp="cd ../.."
 alias g="git status"
+alias gs="git status"
+alias ga="git add"
+alias gaa="git add ."
+alias gc="git commit"
+alias gcm="git commit -m"
+alias gp="git push"
+alias gpl="git pull"
+alias gd="git diff"
+alias gb="git branch"
+alias gl="git log --oneline --graph --decorate"
+alias cb="cargo build"
+alias cr="cargo run"
+alias ct="cargo test"
+alias cc="cargo check"
+alias cl="cargo clippy -- -D warnings"
+alias crr="cargo run --release"
+alias reload="source ~/.bnbrc"
+alias cls="clear"
+alias h="history"

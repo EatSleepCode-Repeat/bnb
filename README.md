@@ -1,35 +1,35 @@
 # bnb
 
-`bnb` is a Rust command shell for users who want a polished, zsh-inspired interactive workflow with a small, explicit shell-language surface. It provides a Git-aware prompt, command-line editing, history search and suggestions, common command composition, directory navigation, and configurable aliases and environment variables.
+`bnb` is a fast, Rust command shell built for developers who want a polished, zsh-inspired interactive workflow with zero-latency TUI tools, contextual workspaces, and enhanced local security out of the box.
 
 ---
 
 ## Features
 
-- **Interactive TUI Overlays** — Sleek modal popups with rounded borders, contextual icons, live fuzzy character match highlighting, and sliding window scrolling:
-  - **Universal Command Palette (`Ctrl+K`)** — Single interactive launcher to search, discover, and trigger every TUI tool, shell action, or configuration helper.
-  - **Visual Trash Vault (`Ctrl+U`)** — Interactive modal displaying soft-deleted files, sizes, and timestamps. Select individual or multiple items (`Tab`/`Space`) to restore or permanently purge.
-  - **History Search (`Ctrl+R`)** — Fuzzy search and select past commands from shell history.
-  - **Fuzzy File Finder (`Ctrl+F`)** — Search project files recursively (skipping `.git`, `node_modules`, `target`, etc.) and insert paths directly into your active prompt.
-  - **Directory Overview (command palette)** — Browse the current directory in a two-pane view, preview folders and text files, change into a chosen folder, or insert a file path into your prompt.
-  - **Git Branch Switcher (`Ctrl+B`)** — Inspect local (`🌿`) and remote (`🌐`) branches and switch branches effortlessly.
-  - **Multi-Select Git Stager (`Ctrl+G`)** — Visual status TUI allowing bulk file staging (`git add`) and unstaging (`git restore --staged`) using checkbox selection.
-  - **Global Project Switcher (`Ctrl+O`)** — Scans your system for local Git repositories and enables instant directory hopping.
-  - **Directory Jumper (`Ctrl+Z`)** — Jump directly to your most frequent directories (`📁`) powered by `z` frecency scores.
-  - **Prompt Theme Wizard (`Ctrl+T`)** — Interactive setup wizard with live prompt previews to customize layout, colors, and Nerd Font icons.
+- **Adaptive Workspace Engine** — Automatically detects project manifests (`Cargo.toml`, `package.json`, `go.mod`, `docker-compose.yml`, `pyproject.toml`) upon entering a directory. Displays real-time stack badges in your prompt (e.g., `[🦀 Rust 🐳 Docker]`) and injects dynamic, stack-aware commands into your Command Palette.
+- **Zero-Leak Secret Vault (`bnb vault`)** — Encrypted local key-value secret store (`~/.bnb/vault.json` with strict `0600` permissions). Reference secrets directly in commands via `$vault:KEY_NAME` or `${vault:KEY_NAME}` to expand values in-memory at execution time, preventing secrets from leaking into `~/.bnb_history` or process argument lists (`ps aux`).
+- **Multi-Line Shell Functions** — Full support for shell function definitions (`name() { ... }` and `function name { ... }`) with multi-line interactive block continuation (` >` prompt) and parameter expansion (`$1`, `$2`, `$@`, `$*`).
+- **Interactive Safety Interceptor** — Styled TUI guardrail modal intercepting destructive operations (`rm -rf *`, `git push --force`, `dd of=/dev/sd*`, `mkfs`, `chmod -R /`). Prompts for user confirmation before execution.
+- **Universal Command Palette (`Ctrl+K`)** — Single interactive launcher to search, discover, and trigger every TUI tool, workspace shortcut, shell action, or configuration helper.
+- **Visual Trash Vault (`Ctrl+U`)** — Interactive modal displaying soft-deleted files, sizes, and timestamps. Select individual or multiple items (`Tab`/`Space`) to restore or permanently purge.
+- **Interactive Alias Manager (`alias-config`)** — Dedicated TUI wizard to add, edit, search, and remove persistent aliases stored in `~/.bnbrc`.
+- **History Search (`Ctrl+R`)** — Fuzzy search and select past commands from shell history.
+- **Fuzzy File Finder (`Ctrl+F`)** — Search project files recursively (skipping `.git`, `node_modules`, `target`, etc.) and insert paths directly into your active prompt.
+- **Directory Overview (`Ctrl+K`)** — Browse the current directory in a two-pane view, preview folders and text files, change into a chosen folder, or insert a file path into your prompt.
+- **Git Branch Switcher (`Ctrl+B`)** — Inspect local (`🌿`) and remote (`🌐`) branches and switch branches effortlessly.
+- **Multi-Select Git Stager (`Ctrl+G`)** — Visual status TUI allowing bulk file staging (`git add`) and unstaging (`git restore --staged`) using checkbox selection.
+- **Global Project Switcher (`Ctrl+O`)** — Scans your system for local Git repositories and enables instant directory hopping.
+- **Directory Jumper (`Ctrl+Z`)** — Jump directly to your most frequent directories (`📁`) powered by `z` frecency scores.
+- **Prompt Theme Wizard (`Ctrl+T`)** — Interactive setup wizard with live prompt previews to customize layout, colors, and Nerd Font icons.
 - **Smart Typo Auto-Correction** — Detects mistyped commands using Levenshtein distance on command failure (`127`) and offers instant one-key (`Enter`) execution of the corrected command.
-- **Prompt & Git Integration** — Dynamic Powerline or Lean rendering of OS, directory path, Git branch state (dirty, untracked, ahead/behind counters), and execution time for long-running commands.
-- **Safety Guardrail (`rm` & `undo`)** — The `rm` builtin intercepts deletions and safely moves files to `~/.bnb/trash/` with nanosecond-unique timestamps. The `undo` builtin restores them visually or instantly via `--last`.
+- **Prompt & Stack Integration** — Dynamic Powerline, Lean, or Minimal rendering of OS icon, directory path, Git branch state (dirty, untracked, ahead/behind counters), execution timer, and active stack badges.
+- **Safety Guardrail (`rm` & `undo`)** — The `rm` builtin soft-deletes items into `~/.bnb/trash/` with nanosecond-unique timestamps. The `undo` builtin restores them visually or instantly via `--last`.
 - **Real-Time Syntax Highlighting** — Visual status for valid commands (green), invalid commands (red), operators (yellow), strings (cyan), and environment variables (magenta).
 - **Inline Autosuggestions** — Fish-style history completion as you type, accepted using the right arrow key (`→`).
-- **Command Completion** — Completes builtins, aliases, commands from `PATH`, and file paths.
-- **Command & Parameter Substitution** — Full support for nested command execution (`$(cmd)` and `` `cmd` ``), environment parameters (`$NAME`, `${NAME}`), wildcards, brace expansions, exit status (`$?`), and process ID (`$$`).
+- **Command & Parameter Substitution** — Support for nested command execution (`$(cmd)` and `` `cmd` ``), environment parameters (`$NAME`, `${NAME}`), vault variables (`$vault:KEY`), wildcards, brace expansions, exit status (`$?`), and process ID (`$$`).
 - **Frecency Directory Navigation (`z`)** — Jumps to frequently used directories based on rank and recency, including an interactive selection mode (`z -i`).
 - **Pipelines and Redirection** — Supports conditional chaining (`&&`, `||`), sequencing (`;` and newlines), background launch (`&`), pipes (`|`), and common file redirections (`>`, `>>`, `<`, `2>`, `2>>`, `&>`).
-- **Expansion Support** — Supports tilde, unquoted simple wildcards (`*`, `?`), brace ranges (`{1..5}`, `{a..e}`), comma expansion (`{foo,bar}`), environment parameters (`$NAME`, `${NAME}`), common parameter defaults/length/prefix-suffix removal, exit status (`$?`), and process ID (`$$`). Quoted wildcard characters remain literal.
-- **Shell Assignments** — Supports persistent `NAME=value` assignments and temporary command-prefix assignments such as `EDITOR=vim command`.
-- **Config & Sourcing** — Loads only `~/.bnbrc` on startup and accepts simple `export KEY=VALUE` and `alias NAME=VALUE` statements. It does not read `~/.zshrc` or `~/.bashrc`. `source` and `.` can explicitly load a file containing the same supported subset; they do not execute arbitrary shell scripts.
-- **Explicit Safety Boundary** — Unsupported config lines are reported with file and line numbers, keeping the shell intentionally small and predictable instead of silently accepting unsupported zsh syntax.
+- **Config & Sourcing** — Loads `~/.bnbrc` on startup. Accepts simple `export KEY=VALUE`, `alias NAME=VALUE`, and function definitions. `source` and `.` explicitly load configuration files.
 
 ---
 
@@ -44,7 +44,7 @@ cargo install bnb-shell
 ### From Source
 
 ```bash
-git clone [https://github.com/EatSleepCode-Repeat/bnb.git](https://github.com/EatSleepCode-Repeat/bnb.git)
+git clone https://github.com/EatSleepCode-Repeat/bnb.git
 cd bnb
 cargo install --path .
 ```
@@ -93,27 +93,62 @@ chsh -s $(which bnb)
 
 ## Builtin Commands
 
-| Command                      | Description                                                                    |
-| :--------------------------- | :----------------------------------------------------------------------------- |
-| `rm <file ...>`              | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
-| `undo [--last]`              | Open Visual Trash Vault TUI or restore the most recently trashed file          |
-| `prompt-config`              | Launch the interactive prompt theme configuration wizard                       |
-| `cd [dir \| -]`              | Change working directory (supports `cd -` and auto `.env` loading)             |
-| `mkcd <dir>`                 | Create directory hierarchy (`mkdir -p`) and switch into it                     |
-| `z <query>`                  | Jump to highest frecency matching directory                                    |
-| `z -i [query]`               | Interactively pick from top matching directories in a TUI popup                |
-| `which <cmd>` / `type <cmd>` | Identify command source (builtin, alias, or file path)                         |
-| `alias [key=val]`            | Set or display command aliases                                                 |
-| `unalias <name \| -a>`       | Remove specific alias or clear all (`-a`)                                      |
-| `export [key=val]`           | Set or print environment variables                                             |
-| `unset <key ...>`            | Remove environment variables                                                   |
-| `source <file>` / `. <file>` | Read and execute supported config statements from a file in the current shell  |
-| `history [-c]`               | Print command history or clear it (`-c`)                                       |
-| `echo [-n] [-e] <text>`      | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
-| `pwd`                        | Print current working directory                                                |
-| `clear`                      | Clear terminal screen                                                          |
-| `bnb-update`                 | Check crates.io and update binary in place                                     |
-| `exit [code]`                | Terminate shell session with exit code                                         |
+| Command                          | Description                                                                    |
+| :------------------------------- | :----------------------------------------------------------------------------- |
+| `vault <set\|get\|list\|remove>` | Manage local encrypted secret vault (`$vault:KEY` expansion)                   |
+| `functions`                      | List all currently defined multi-line shell functions                          |
+| `unfunction <name>`              | Remove a defined shell function from memory                                    |
+| `alias-config`                   | Launch the interactive TUI Alias Manager                                       |
+| `rm <file ...>`                  | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
+| `undo [--last]`                  | Open Visual Trash Vault TUI or restore the most recently trashed file          |
+| `prompt-config`                  | Launch the interactive prompt theme configuration wizard                       |
+| `cd [dir \| -]`                  | Change working directory (supports `cd -` and stack badge auto-detection)      |
+| `mkcd <dir>`                     | Create directory hierarchy (`mkdir -p`) and switch into it                     |
+| `z <query>`                      | Jump to highest frecency matching directory                                    |
+| `z -i [query]`                   | Interactively pick from top matching directories in a TUI popup                |
+| `which <cmd>` / `type <cmd>`     | Identify command source (builtin, function, alias, or binary path)             |
+| `alias [key=val]`                | Set or display command aliases                                                 |
+| `unalias <name \| -a>`           | Remove specific alias or clear all (`-a`)                                      |
+| `export [key=val]`               | Set or print environment variables                                             |
+| `unset <key ...>`                | Remove environment variables                                                   |
+| `source <file>` / `. <file>`     | Read and execute supported config statements from a file in current shell      |
+| `history [-c]`                   | Print command history or clear it (`-c`)                                       |
+| `echo [-n] [-e] <text>`          | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
+| `pwd`                            | Print current working directory                                                |
+| `clear`                          | Clear terminal screen                                                          |
+| `cyberpunk`                      | Visual TUI celebration / fireworks animation                                   |
+| `bnb-update`                     | Check crates.io and update binary in place                                     |
+| `exit [code]`                    | Terminate shell session with exit code                                         |
+
+---
+
+## Usage Examples
+
+### Using Secret Vault (`bnb vault`)
+
+```bash
+# Save a secret (input is masked)
+vault set STRIPE_SECRET
+
+# Reference in any shell command without history leakage
+curl -H "Authorization: Bearer $vault:STRIPE_SECRET" https://api.stripe.com/v1/charges
+
+# Or use braced syntax
+echo "Connecting with ${vault:STRIPE_SECRET}"
+```
+
+### Writing Shell Functions
+
+```bash
+# Interactively define a function across multiple lines
+mkcd() {
+    mkdir -p "$1"
+    cd "$1"
+}
+
+# Invoke function with positional arguments
+mkcd my_new_project
+```
 
 ---
 
@@ -123,22 +158,30 @@ chsh -s $(which bnb)
 
 Launch the wizard anytime using **`Ctrl+T`** or by running the **`prompt-config`** builtin.
 
-Your configuration is automatically saved and loaded from `~/.bnb_prompt.conf`.
+Your configuration is saved and loaded automatically from `~/.bnb_prompt.conf`.
 
 - **Styles**: Choose between `powerline` (segmented color blocks), `lean` (modern colored text), or `minimal` (clean, single-line).
 - **Separators**: Select your preferred segment connections, including `angled` (``), `rounded` (``), `slanted` (``), or `none`.
 - **Icons**: Toggle Nerd Font glyphs on or off for strict standard terminal compatibility.
 - **Color Schemes**: Choose from 6 presets including Catppuccin Mocha, Dracula, Nord, Gruvbox Dark, Tokyo Night, and Classic.
 
+---
+
 ## Configuration
 
-Place supported aliases and exports in `~/.bnbrc`. An example template is available in [.bnbrc.example](./.bnbrc.example).
+Place supported aliases, exports, and function definitions in `~/.bnbrc`.
 
 ```bash
-# Example ~/.bnbrc (supported syntax)
+# Example ~/.bnbrc
 export EDITOR=vim
 alias ll="ls -la"
 alias g="git"
+
+# Custom shell functions
+gcommit() {
+    git add .
+    git commit -m "$1"
+}
 ```
 
 Reload configuration in an active session:
@@ -147,15 +190,13 @@ Reload configuration in an active session:
 source ~/.bnbrc
 ```
 
-`source` currently accepts the same config subset; it does not run arbitrary shell scripts.
+---
 
-## Compatibility boundary
+## Compatibility Boundary
 
-bnb is zsh-inspired, not a zsh implementation. Quotes and escapes are checked, and common command composition and expansions are available. Startup reads only `.bnbrc`; `.zshrc` is left to zsh. If you explicitly `source` a file, unsupported statements are reported with file and line numbers.
+`bnb` is an interactive developer shell with explicit scripting capabilities. Startup reads `~/.bnbrc`; `.zshrc` is left to `zsh`. If you explicitly `source` a file, unsupported statements are reported with file and line numbers.
 
-The current shell does not implement shell functions, arrays, loops/conditionals, process substitution, advanced zsh glob qualifiers/options, or full interactive job control. Parameter default operands are literal strings, and prefix/suffix removal supports literal matches rather than full zsh pattern expressions. Script files are processed one line at a time. Background launch is not equivalent to zsh job management. These boundaries are intentional; do not rely on bnb to run arbitrary zsh or bash scripts.
-
-Unknown external commands are resolved and executed directly by bnb. bnb does not reconstruct command text and pass it to a system zsh as a fallback.
+Multi-line functions, positional parameters (`$1`, `$@`), vault expansions, alias management, and interactive block continuation are natively supported. Full control flow structures (`if`/`else` conditionals, `for`/`while` loops) and background job tables (`fg`/`bg`) are slated for the upcoming `v1.0` release.
 
 ---
 

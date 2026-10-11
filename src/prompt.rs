@@ -160,6 +160,7 @@ pub fn render_prompt_with_config(
         .unwrap_or_else(|_| "/".into());
 
     let git_status = get_git_status();
+    let workspace_badge = crate::workspace::get_workspace_badge();
 
     let os_icon = if !config.enable_icons {
         "OS"
@@ -181,7 +182,7 @@ pub fn render_prompt_with_config(
         _ => "\u{e0b0}", // angled
     };
 
-    let left_bar = match config.style.as_str() {
+    let base_left_bar = match config.style.as_str() {
         "lean" => {
             let os_part = format!("\x1b[1;36m{}\x1b[0m", os_icon);
             let dir_part = format!("\x1b[1;34m{}{}\x1b[0m", dir_icon, cwd);
@@ -273,6 +274,8 @@ pub fn render_prompt_with_config(
             )
         }
     };
+
+    let left_bar = format!("{}{}", workspace_badge, base_left_bar);
 
     let status_badge = match last_status {
         Some(code) if code != 0 => {
