@@ -4,6 +4,7 @@ mod executor;
 mod expander;
 mod helper;
 mod parser;
+mod plugins;
 mod prompt;
 mod updater;
 pub mod vault;
@@ -17,6 +18,8 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::time::Instant;
+
+use plugins::PluginManager;
 
 use helper::BnbHelper;
 use rustyline::config::Config;
@@ -82,7 +85,7 @@ fn print_help() {
     println!("    \x1b[36m-V, --version\x1b[0m    Print version information and exit\n");
 
     println!("\x1b[1;33mKEYBINDINGS & TUIs:\x1b[0m");
-    println!("    \x1b[36mCtrl+K\x1b[0m           Universal Command Palette");
+    println!("    \x1b[36mCtrl+K\x1b[0m           Universal Command Palette (Workspace & Plugins)");
     println!("    \x1b[36mCtrl+R\x1b[0m           Interactive TUI fuzzy history finder");
     println!("    \x1b[36mCtrl+F\x1b[0m           Interactive TUI fuzzy file finder");
     println!("    \x1b[36mCtrl+B\x1b[0m           Interactive TUI Git branch switcher");
@@ -97,7 +100,7 @@ fn print_help() {
     println!("\x1b[1;33mBUILTINS:\x1b[0m");
     println!("    alias, alias-config, cd, clear, cyberpunk, echo, exit, export, history, mkcd,");
     println!(
-        "    prompt-config, pwd, source (.), type, unalias, undo, unset, which, z, bnb-update\n"
+        "    plugin, prompt-config, pwd, source (.), type, unalias, undo, unset, vault, which, z, bnb-update\n"
     );
 }
 
@@ -207,6 +210,8 @@ fn get_command_candidates() -> Vec<String> {
         "which".into(),
         "type".into(),
         "undo".into(),
+        "vault".into(),
+        "plugin".into(),
         "z".into(),
         "prompt-config".into(),
         "cyberpunk".into(),
@@ -548,6 +553,7 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
     ) -> Option<Cmd> {
         let mut palette = Vec::new();
         let mut workspace_map = std::collections::HashMap::new();
+        let mut plugin_action_map = std::collections::HashMap::new();
 
         // 1. Detect Stack-Aware Workspace Actions
         if let Ok(pwd) = env::current_dir() {
@@ -558,7 +564,15 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             }
         }
 
-        // 2. Standard Universal Palette Actions
+        // 2. Load Installed Plugin Actions
+        let plugin_mgr = PluginManager::new();
+        for (plugin_name, action) in plugin_mgr.load_all_actions() {
+            let label = format!("🧩 [{}] {}", plugin_name, action.label);
+            palette.push(label.clone());
+            plugin_action_map.insert(label, action.command);
+        }
+
+        // 3. Standard Universal Palette Actions
         let standard_actions = vec![
             "🔍 History Search (Ctrl+R)".to_string(),
             "📄 Fuzzy File Finder (Ctrl+F)".to_string(),
@@ -568,6 +582,8 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             "🚀 Global Project Switcher (Ctrl+O)".to_string(),
             "📝 Git Status Stager (Ctrl+G)".to_string(),
             "🔐 Secret Vault (vault list)".to_string(),
+            "🧩 Plugin Marketplace (plugin store)".to_string(),
+            "🧩 List Installed Plugins (plugin list)".to_string(),
             "⚙️ Configure Prompt Theme (Ctrl+T)".to_string(),
             "⚡ Configure Aliases (alias-config)".to_string(),
             "🎆 Cyberpunk Fireworks (cyberpunk)".to_string(),
@@ -585,6 +601,11 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     Some(Cmd::Replace(
                         Movement::BeginningOfLine,
                         Some(cmd_to_run.clone()),
+                    ))
+                } else if let Some(plugin_cmd) = plugin_action_map.get(&selected) {
+                    Some(Cmd::Replace(
+                        Movement::BeginningOfLine,
+                        Some(plugin_cmd.clone()),
                     ))
                 } else if selected.contains("History Search") {
                     FuzzyHistoryHandler.handle(_evt, _n, _positive, _ctx)
@@ -618,6 +639,16 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     FuzzyProjectHandler.handle(_evt, _n, _positive, _ctx)
                 } else if selected.contains("Git Status Stager") {
                     FuzzyGitStagerHandler.handle(_evt, _n, _positive, _ctx)
+                } else if selected.contains("Plugin Marketplace") {
+                    Some(Cmd::Replace(
+                        Movement::BeginningOfLine,
+                        Some("plugin store".to_string()),
+                    ))
+                } else if selected.contains("List Installed Plugins") {
+                    Some(Cmd::Replace(
+                        Movement::BeginningOfLine,
+                        Some("plugin list".to_string()),
+                    ))
                 } else if selected.contains("Configure Prompt Theme") {
                     let _ = crate::tui::prompt_wizard::run_wizard();
                     Some(Cmd::Noop)
