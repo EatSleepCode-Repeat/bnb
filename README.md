@@ -1,3 +1,4 @@
+````markdown
 # bnb
 
 `bnb` is a fast, Rust command shell built for developers who want a polished, zsh-inspired interactive workflow with zero-latency TUI tools, contextual workspaces, and enhanced local security out of the box.
@@ -7,10 +8,11 @@
 ## Features
 
 - **Adaptive Workspace Engine** — Automatically detects project manifests (`Cargo.toml`, `package.json`, `go.mod`, `docker-compose.yml`, `pyproject.toml`) upon entering a directory. Displays real-time stack badges in your prompt (e.g., `[🦀 Rust 🐳 Docker]`) and injects dynamic, stack-aware commands into your Command Palette.
+- **Lightweight Plugin Engine (`bnb plugin`)** — Decoupled manifest model (`plugin.toml`) backed by a GitHub monorepo registry (`registry.json`). Install official or third-party plugins directly (`plugin install <name|user/repo>`), browse the registry marketplace (`plugin store`), and automatically expose community actions in `Ctrl+K` with zero shell startup overhead.
 - **Zero-Leak Secret Vault (`bnb vault`)** — Encrypted local key-value secret store (`~/.bnb/vault.json` with strict `0600` permissions). Reference secrets directly in commands via `$vault:KEY_NAME` or `${vault:KEY_NAME}` to expand values in-memory at execution time, preventing secrets from leaking into `~/.bnb_history` or process argument lists (`ps aux`).
 - **Multi-Line Shell Functions** — Full support for shell function definitions (`name() { ... }` and `function name { ... }`) with multi-line interactive block continuation (` >` prompt) and parameter expansion (`$1`, `$2`, `$@`, `$*`).
 - **Interactive Safety Interceptor** — Styled TUI guardrail modal intercepting destructive operations (`rm -rf *`, `git push --force`, `dd of=/dev/sd*`, `mkfs`, `chmod -R /`). Prompts for user confirmation before execution.
-- **Universal Command Palette (`Ctrl+K`)** — Single interactive launcher to search, discover, and trigger every TUI tool, workspace shortcut, shell action, or configuration helper.
+- **Universal Command Palette (`Ctrl+K`)** — Single interactive launcher to search, discover, and trigger every TUI tool, workspace shortcut, plugin action, shell command, or configuration helper.
 - **Visual Trash Vault (`Ctrl+U`)** — Interactive modal displaying soft-deleted files, sizes, and timestamps. Select individual or multiple items (`Tab`/`Space`) to restore or permanently purge.
 - **Interactive Alias Manager (`alias-config`)** — Dedicated TUI wizard to add, edit, search, and remove persistent aliases stored in `~/.bnbrc`.
 - **History Search (`Ctrl+R`)** — Fuzzy search and select past commands from shell history.
@@ -40,6 +42,7 @@
 ```bash
 cargo install bnb-shell
 ```
+````
 
 ### From Source
 
@@ -47,6 +50,7 @@ cargo install bnb-shell
 git clone https://github.com/EatSleepCode-Repeat/bnb.git
 cd bnb
 cargo install --path .
+
 ```
 
 To set `bnb` as your default system shell:
@@ -54,6 +58,7 @@ To set `bnb` as your default system shell:
 ```bash
 which bnb | sudo tee -a /etc/shells
 chsh -s $(which bnb)
+
 ```
 
 ---
@@ -61,7 +66,7 @@ chsh -s $(which bnb)
 ## CLI Options
 
 | Flag              | Description                                         |
-| :---------------- | :-------------------------------------------------- |
+| ----------------- | --------------------------------------------------- |
 | `-c <command>`    | Execute a command string non-interactively and exit |
 | `-h`, `--help`    | Print usage information and list available builtins |
 | `-V`, `--version` | Display version information                         |
@@ -70,59 +75,80 @@ chsh -s $(which bnb)
 
 ## Keybindings
 
-| Shortcut          | Action                                          |
-| :---------------- | :---------------------------------------------- |
-| `Ctrl + K`        | Open Universal Command Palette                  |
-| `Ctrl + U`        | Open Visual Trash Vault modal                   |
-| `Ctrl + T`        | Open Prompt Theme Configuration Wizard          |
-| `Ctrl + G`        | Open Multi-Select Git Status Stager             |
-| `Ctrl + O`        | Open Global Project Switcher                    |
-| `Ctrl + R`        | Open interactive TUI history search             |
-| `Ctrl + F`        | Open interactive TUI file finder                |
-| `Ctrl + B`        | Open interactive TUI Git branch switcher        |
-| `Ctrl + Z`        | Open interactive TUI frecency directory jumper  |
-| `Ctrl + A`        | Move to the beginning of the input line         |
-| `Ctrl + E`        | Move to the end of the input line               |
-| `Ctrl + L`        | Clear the terminal screen                       |
-| `Right Arrow (→)` | Accept inline autosuggestion                    |
-| `Tab`             | Complete a command or path                      |
-| `Ctrl + C`        | Cancel active input buffer or interrupt process |
-| `Ctrl + D`        | Send EOF / exit shell session                   |
+| Shortcut          | Action                                                      |
+| ----------------- | ----------------------------------------------------------- |
+| `Ctrl + K`        | Open Universal Command Palette (Workspace & Plugin actions) |
+| `Ctrl + U`        | Open Visual Trash Vault modal                               |
+| `Ctrl + T`        | Open Prompt Theme Configuration Wizard                      |
+| `Ctrl + G`        | Open Multi-Select Git Status Stager                         |
+| `Ctrl + O`        | Open Global Project Switcher                                |
+| `Ctrl + R`        | Open interactive TUI history search                         |
+| `Ctrl + F`        | Open interactive TUI file finder                            |
+| `Ctrl + B`        | Open interactive TUI Git branch switcher                    |
+| `Ctrl + Z`        | Open interactive TUI frecency directory jumper              |
+| `Ctrl + A`        | Move to the beginning of the input line                     |
+| `Ctrl + E`        | Move to the end of the input line                           |
+| `Ctrl + L`        | Clear the terminal screen                                   |
+| `Right Arrow (→)` | Accept inline autosuggestion                                |
+| `Tab`             | Complete a command or path                                  |
+| `Ctrl + C`        | Cancel active input buffer or interrupt process             |
+| `Ctrl + D`        | Send EOF / exit shell session                               |
 
 ---
 
 ## Builtin Commands
 
-| Command                          | Description                                                                    |
-| :------------------------------- | :----------------------------------------------------------------------------- |
-| `vault <set\|get\|list\|remove>` | Manage local encrypted secret vault (`$vault:KEY` expansion)                   |
-| `functions`                      | List all currently defined multi-line shell functions                          |
-| `unfunction <name>`              | Remove a defined shell function from memory                                    |
-| `alias-config`                   | Launch the interactive TUI Alias Manager                                       |
-| `rm <file ...>`                  | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
-| `undo [--last]`                  | Open Visual Trash Vault TUI or restore the most recently trashed file          |
-| `prompt-config`                  | Launch the interactive prompt theme configuration wizard                       |
-| `cd [dir \| -]`                  | Change working directory (supports `cd -` and stack badge auto-detection)      |
-| `mkcd <dir>`                     | Create directory hierarchy (`mkdir -p`) and switch into it                     |
-| `z <query>`                      | Jump to highest frecency matching directory                                    |
-| `z -i [query]`                   | Interactively pick from top matching directories in a TUI popup                |
-| `which <cmd>` / `type <cmd>`     | Identify command source (builtin, function, alias, or binary path)             |
-| `alias [key=val]`                | Set or display command aliases                                                 |
-| `unalias <name \| -a>`           | Remove specific alias or clear all (`-a`)                                      |
-| `export [key=val]`               | Set or print environment variables                                             |
-| `unset <key ...>`                | Remove environment variables                                                   |
-| `source <file>` / `. <file>`     | Read and execute supported config statements from a file in current shell      |
-| `history [-c]`                   | Print command history or clear it (`-c`)                                       |
-| `echo [-n] [-e] <text>`          | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
-| `pwd`                            | Print current working directory                                                |
-| `clear`                          | Clear terminal screen                                                          |
-| `cyberpunk`                      | Visual TUI celebration / fireworks animation                                   |
-| `bnb-update`                     | Check crates.io and update binary in place                                     |
-| `exit [code]`                    | Terminate shell session with exit code                                         |
+| Command                              | Description                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------ |
+| `plugin <store/install/list/remove>` | Browse central registry marketplace and manage installed shell plugins         |
+| `vault <set/get/list/remove>`        | Manage local encrypted secret vault (`$vault:KEY` expansion)                   |
+| `functions`                          | List all currently defined multi-line shell functions                          |
+| `unfunction <name>`                  | Remove a defined shell function from memory                                    |
+| `alias-config`                       | Launch the interactive TUI Alias Manager                                       |
+| `rm <file ...>`                      | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
+| `undo [--last]`                      | Open Visual Trash Vault TUI or restore the most recently trashed file          |
+| `prompt-config`                      | Launch the interactive prompt theme configuration wizard                       |
+| `cd [dir -]`                         | Change working directory (supports `cd -` and stack badge auto-detection)      |
+| `mkcd <dir>`                         | Create directory hierarchy (`mkdir -p`) and switch into it                     |
+| `z <query>`                          | Jump to highest frecency matching directory                                    |
+| `z -i [query]`                       | Interactively pick from top matching directories in a TUI popup                |
+| `which <cmd>` / `type <cmd>`         | Identify command source (builtin, function, alias, or binary path)             |
+| `alias [key=val]`                    | Set or display command aliases                                                 |
+| `unalias <name -a>`                  | Remove specific alias or clear all (`-a`)                                      |
+| `export [key=val]`                   | Set or print environment variables                                             |
+| `unset <key ...>`                    | Remove environment variables                                                   |
+| `source <file>` / `. <file>`         | Read and execute supported config statements from a file in current shell      |
+| `history [-c]`                       | Print command history or clear it (`-c`)                                       |
+| `echo [-n] [-e] <text>`              | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
+| `pwd`                                | Print current working directory                                                |
+| `clear`                              | Clear terminal screen                                                          |
+| `cyberpunk`                          | Visual TUI celebration / fireworks animation                                   |
+| `bnb-update`                         | Check crates.io and update binary in place                                     |
+| `exit [code]`                        | Terminate shell session with exit code                                         |
 
 ---
 
 ## Usage Examples
+
+### Using the Plugin System (`bnb plugin`)
+
+```bash
+# Browse central registry marketplace
+plugin store
+
+# Install an official plugin from the monorepo registry
+plugin install docker
+
+# Or install a third-party plugin directly from GitHub
+plugin install username/bnb-custom-plugin
+
+# List installed plugins & registered Ctrl+K shortcuts
+plugin list
+
+# Remove an installed plugin
+plugin remove docker
+
+```
 
 ### Using Secret Vault (`bnb vault`)
 
@@ -131,10 +157,11 @@ chsh -s $(which bnb)
 vault set STRIPE_SECRET
 
 # Reference in any shell command without history leakage
-curl -H "Authorization: Bearer $vault:STRIPE_SECRET" https://api.stripe.com/v1/charges
+curl -H "Authorization: Bearer $vault:STRIPE_SECRET" [https://api.stripe.com/v1/charges](https://api.stripe.com/v1/charges)
 
 # Or use braced syntax
 echo "Connecting with ${vault:STRIPE_SECRET}"
+
 ```
 
 ### Writing Shell Functions
@@ -148,6 +175,7 @@ mkcd() {
 
 # Invoke function with positional arguments
 mkcd my_new_project
+
 ```
 
 ---
@@ -182,12 +210,14 @@ gcommit() {
     git add .
     git commit -m "$1"
 }
+
 ```
 
 Reload configuration in an active session:
 
 ```bash
 source ~/.bnbrc
+
 ```
 
 ---
@@ -196,10 +226,14 @@ source ~/.bnbrc
 
 `bnb` is an interactive developer shell with explicit scripting capabilities. Startup reads `~/.bnbrc`; `.zshrc` is left to `zsh`. If you explicitly `source` a file, unsupported statements are reported with file and line numbers.
 
-Multi-line functions, positional parameters (`$1`, `$@`), vault expansions, alias management, and interactive block continuation are natively supported. Full control flow structures (`if`/`else` conditionals, `for`/`while` loops) and background job tables (`fg`/`bg`) are slated for the upcoming `v1.0` release.
+Multi-line functions, positional parameters (`$1`, `$@`), plugin manifests, vault expansions, alias management, and interactive block continuation are natively supported. Full control flow structures (`if`/`else` conditionals, `for`/`while` loops) and background job tables (`fg`/`bg`) are slated for the upcoming `v1.0` release.
 
 ---
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
+
+```
+
+```

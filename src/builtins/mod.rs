@@ -42,6 +42,8 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "bnb-update"
             | "cyberpunk"
             | "vault"
+            | "plugin"
+            | "bnb-plugin"
     )
 }
 
@@ -90,6 +92,7 @@ pub fn execute_with_writer(
         "cyberpunk" => crate::tui::fireworks::run_fireworks(),
         "bnb-update" => run_bnb_update(),
         "vault" => crate::vault::run_vault_cli(args),
+        "plugin" | "bnb-plugin" => run_plugin_cli(args, writer),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
 }
@@ -100,6 +103,71 @@ pub fn dispatch(cmd: &str, args: &[String]) -> Option<Result<(), String>> {
         Some(execute_with_writer(cmd, args, &mut std::io::stdout()))
     } else {
         None
+    }
+}
+
+fn run_plugin_cli(args: &[String], writer: &mut dyn Write) -> Result<(), String> {
+    let mgr = crate::plugins::PluginManager::new();
+    let subcommand = args.get(0).map(|s| s.as_str()).unwrap_or("list");
+
+    match subcommand {
+        "install" => {
+            if let Some(target) = args.get(1) {
+                match mgr.install(target) {
+                    Ok(msg) => {
+                        writeln!(writer, "\x1b[1;32m✓ {}\x1b[0m", msg)
+                            .map_err(|e| e.to_string())?;
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
+            } else {
+                Err("plugin install: missing target (e.g. 'plugin install aws' or 'plugin install user/repo')".to_string())
+            }
+        }
+        "remove" | "uninstall" => {
+            if let Some(name) = args.get(1) {
+                match mgr.remove(name) {
+                    Ok(msg) => {
+                        writeln!(writer, "\x1b[1;32m{}\x1b[0m", msg).map_err(|e| e.to_string())?;
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                }
+            } else {
+                Err("plugin remove: missing plugin name (e.g. 'plugin remove aws')".to_string())
+            }
+        }
+        "list" => {
+            mgr.list();
+            Ok(())
+        }
+        "store" => match mgr.fetch_registry() {
+            Ok(reg) => {
+                writeln!(
+                    writer,
+                    "\x1b[1;36m🧩 bnb-shell Central Registry (v{}):\x1b[0m",
+                    reg.version
+                )
+                .map_err(|e| e.to_string())?;
+                for p in reg.plugins {
+                    writeln!(
+                        writer,
+                        "  • \x1b[1;37m{:<12}\x1b[0m [{}] - {}",
+                        p.name, p.category, p.description
+                    )
+                    .map_err(|e| e.to_string())?;
+                }
+                writeln!(
+                    writer,
+                    "\nInstall any plugin with: \x1b[1;33mplugin install <name>\x1b[0m"
+                )
+                .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        },
+        _ => Err("plugin: unknown subcommand. Available: list, install, remove, store".to_string()),
     }
 }
 
