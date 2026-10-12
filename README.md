@@ -1,4 +1,3 @@
-````markdown
 # bnb
 
 `bnb` is a fast, Rust command shell built for developers who want a polished, zsh-inspired interactive workflow with zero-latency TUI tools, contextual workspaces, and enhanced local security out of the box.
@@ -42,7 +41,6 @@
 ```bash
 cargo install bnb-shell
 ```
-````
 
 ### From Source
 
@@ -50,7 +48,6 @@ cargo install bnb-shell
 git clone https://github.com/EatSleepCode-Repeat/bnb.git
 cd bnb
 cargo install --path .
-
 ```
 
 To set `bnb` as your default system shell:
@@ -58,7 +55,6 @@ To set `bnb` as your default system shell:
 ```bash
 which bnb | sudo tee -a /etc/shells
 chsh -s $(which bnb)
-
 ```
 
 ---
