@@ -4,6 +4,7 @@ use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::{stdout, Write};
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
@@ -139,6 +140,17 @@ pub fn get_secret(key: &str) -> Option<String> {
     decrypt_val(enc)
 }
 
+pub fn get_all_secrets() -> HashMap<String, String> {
+    let vault = load_vault();
+    let mut decrypted = HashMap::new();
+    for (k, enc) in vault.secrets {
+        if let Some(dec) = decrypt_val(&enc) {
+            decrypted.insert(k, dec);
+        }
+    }
+    decrypted
+}
+
 pub fn delete_secret(key: &str) -> Result<bool, String> {
     let mut vault = load_vault();
     let removed = vault.secrets.remove(key).is_some();
@@ -162,6 +174,7 @@ pub fn run_vault_cli(args: &[String]) -> Result<(), String> {
 
     let subcmd = args[0].as_str();
     match subcmd {
+        "tui" => crate::tui::vault_manager::run_vault_manager(),
         "set" => {
             let key = args
                 .get(1)
@@ -214,10 +227,106 @@ pub fn run_vault_cli(args: &[String]) -> Result<(), String> {
             }
         }
         "list" => print_vault_status(),
+        "run" => run_with_vault(&args[1..]),
         _ => Err(format!(
-            "bnb: unknown vault subcommand '{}'. Usage: vault <set|get|list|remove> [KEY]",
+            "bnb: unknown vault subcommand '{}'. Usage: vault <set|get|list|remove|run|tui> [args...]",
             subcmd
         )),
+    }
+}
+
+fn run_with_vault(args: &[String]) -> Result<(), String> {
+    if args.is_empty() {
+        return Err(
+            "usage: vault run [--only KEY1,KEY2] [--] <COMMAND> [ARGS...]\nExample: vault run -- python script.py".to_string(),
+        );
+    }
+
+    let mut filter_keys: Option<Vec<String>> = None;
+    let mut command_args: Vec<String> = Vec::new();
+    let mut iter = args.iter().peekable();
+
+    while let Some(arg) = iter.next() {
+        if arg == "--only" {
+            if let Some(keys_csv) = iter.next() {
+                filter_keys = Some(
+                    keys_csv
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect(),
+                );
+            } else {
+                return Err("vault run: --only requires a comma-separated list of keys".to_string());
+            }
+        } else if arg == "--" {
+            command_args.extend(iter.cloned());
+            break;
+        } else if !arg.starts_with('-') {
+            command_args.push(arg.clone());
+            command_args.extend(iter.cloned());
+            break;
+        } else {
+            return Err(format!("vault run: unknown option '{}'", arg));
+        }
+    }
+
+    if command_args.is_empty() {
+        return Err("vault run: missing command to execute".to_string());
+    }
+
+    let all_secrets = get_all_secrets();
+    if all_secrets.is_empty() {
+        eprintln!("\x1b[1;33m⚠️ bnb: vault is empty. Running command without injected secrets.\x1b[0m");
+    }
+
+    let program = &command_args[0];
+    let prog_args = &command_args[1..];
+
+    let mut cmd = Command::new(program);
+    cmd.args(prog_args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    match &filter_keys {
+        Some(allowed) => {
+            for key in allowed {
+                if let Some(val) = all_secrets.get(key) {
+                    cmd.env(key, val);
+                } else {
+                    eprintln!(
+                        "\x1b[1;33m⚠️ bnb: vault key '{}' not found, skipping.\x1b[0m",
+                        key
+                    );
+                }
+            }
+        }
+        None => {
+            for (key, val) in &all_secrets {
+                cmd.env(key, val);
+            }
+        }
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("vault run: failed to execute '{}': {}", program, e))?;
+
+    let status = child
+        .wait()
+        .map_err(|e| format!("vault run: error waiting for child process: {}", e))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        match status.code() {
+            Some(code) => Err(format!(
+                "bnb: process '{}' exited with status code {}",
+                program, code
+            )),
+            None => Err(format!("bnb: process '{}' terminated by signal", program)),
+        }
     }
 }
 
@@ -235,7 +344,7 @@ fn print_vault_status() -> Result<(), String> {
     );
     for key in &keys {
         println!(
-            "  • \x1b[1;33m{:<20}\x1b[0m \x1b[38;5;244m[••••••••]\x1b[0m",
+            "  \x1b[1;33m{:<20}\x1b[0m \x1b[38;5;244m[••••••••]\x1b[0m",
             key
         );
     }

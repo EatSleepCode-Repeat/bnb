@@ -108,21 +108,20 @@ pub fn dispatch(cmd: &str, args: &[String]) -> Option<Result<(), String>> {
 
 fn run_plugin_cli(args: &[String], writer: &mut dyn Write) -> Result<(), String> {
     let mgr = crate::plugins::PluginManager::new();
-    let subcommand = args.get(0).map(|s| s.as_str()).unwrap_or("list");
+    let subcommand = args.first().map(|s| s.as_str()).unwrap_or("list");
 
     match subcommand {
         "install" => {
             if let Some(target) = args.get(1) {
                 match mgr.install(target) {
                     Ok(msg) => {
-                        writeln!(writer, "\x1b[1;32m✓ {}\x1b[0m", msg)
-                            .map_err(|e| e.to_string())?;
+                        writeln!(writer, "\x1b[1;32m✓ {}\x1b[0m", msg).map_err(|e| e.to_string())?;
                         Ok(())
                     }
                     Err(err) => Err(err),
                 }
             } else {
-                Err("plugin install: missing target (e.g. 'plugin install aws' or 'plugin install user/repo')".to_string())
+                Err("plugin install: missing target (e.g. 'plugin install docker' or 'plugin install user/repo')".to_string())
             }
         }
         "remove" | "uninstall" => {
@@ -135,8 +134,19 @@ fn run_plugin_cli(args: &[String], writer: &mut dyn Write) -> Result<(), String>
                     Err(err) => Err(err),
                 }
             } else {
-                Err("plugin remove: missing plugin name (e.g. 'plugin remove aws')".to_string())
+                Err("plugin remove: missing plugin name (e.g. 'plugin remove docker')".to_string())
             }
+        }
+        "info" => {
+            if let Some(name) = args.get(1) {
+                mgr.info(name)
+            } else {
+                Err("plugin info: missing plugin name (e.g. 'plugin info docker')".to_string())
+            }
+        }
+        "update" | "upgrade" => {
+            let target = args.get(1).map(|s| s.as_str());
+            mgr.update(target)
         }
         "list" => {
             mgr.list();
@@ -167,7 +177,7 @@ fn run_plugin_cli(args: &[String], writer: &mut dyn Write) -> Result<(), String>
             }
             Err(e) => Err(e),
         },
-        _ => Err("plugin: unknown subcommand. Available: list, install, remove, store".to_string()),
+        _ => Err("plugin: unknown subcommand. Available: list, install, remove, store, info, update".to_string()),
     }
 }
 

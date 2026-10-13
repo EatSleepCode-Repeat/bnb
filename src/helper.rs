@@ -46,28 +46,204 @@ impl Completer for BnbHelper {
                 .last()
                 .is_some_and(|c| "|&;".contains(c));
 
+        // 1. Inline $vault:KEY and ${vault:KEY} auto-completion anywhere in line
+        if let Some(prefix) = current_word.strip_prefix("$vault:") {
+            let mut matches = Vec::new();
+            for key in crate::vault::list_secret_keys() {
+                if key.starts_with(prefix) {
+                    let rep = format!("$vault:{}", key);
+                    matches.push(Pair {
+                        display: rep.clone(),
+                        replacement: rep,
+                    });
+                }
+            }
+            if !matches.is_empty() {
+                return Ok((word_start, matches));
+            }
+        } else if let Some(raw_prefix) = current_word.strip_prefix("${vault:") {
+            let prefix = raw_prefix.trim_end_matches('}');
+            let mut matches = Vec::new();
+            for key in crate::vault::list_secret_keys() {
+                if key.starts_with(prefix) {
+                    let rep = format!("${{vault:{}}}", key);
+                    matches.push(Pair {
+                        display: rep.clone(),
+                        replacement: rep,
+                    });
+                }
+            }
+            if !matches.is_empty() {
+                return Ok((word_start, matches));
+            }
+        }
+
+        // 2. Contextual Builtin Subcommand & Argument Completion
+        let segment = line_up_to_pos
+            .split(['|', '&', ';'])
+            .next_back()
+            .unwrap_or(line_up_to_pos);
+
+        let words: Vec<&str> = segment.split_whitespace().collect();
+        let first_cmd = words.first().copied().unwrap_or("");
+
+        let arg_index = if current_word.is_empty() {
+            words.len()
+        } else {
+            words.len().saturating_sub(1)
+        };
+
+        if !is_command_pos {
+            // Contextual completion for `vault`
+            if first_cmd == "vault" {
+                if arg_index == 1 {
+                    let subcmds = ["set", "get", "list", "remove", "run"];
+                    let mut matches = Vec::new();
+                    for sc in subcmds {
+                        if sc.starts_with(current_word) {
+                            matches.push(Pair {
+                                display: sc.to_string(),
+                                replacement: sc.to_string(),
+                            });
+                        }
+                    }
+                    if !matches.is_empty() {
+                        return Ok((word_start, matches));
+                    }
+                } else if arg_index == 2 {
+                    let prev = words.get(1).copied().unwrap_or("");
+                    if prev == "get" || prev == "remove" || prev == "rm" || prev == "delete" {
+                        let mut matches = Vec::new();
+                        for key in crate::vault::list_secret_keys() {
+                            if key.starts_with(current_word) {
+                                matches.push(Pair {
+                                    display: key.clone(),
+                                    replacement: key,
+                                });
+                            }
+                        }
+                        if !matches.is_empty() {
+                            return Ok((word_start, matches));
+                        }
+                    } else if prev == "run" {
+                        let options = ["--only", "--"];
+                        let mut matches = Vec::new();
+                        for opt in options {
+                            if opt.starts_with(current_word) {
+                                matches.push(Pair {
+                                    display: opt.to_string(),
+                                    replacement: opt.to_string(),
+                                });
+                            }
+                        }
+                        if !matches.is_empty() {
+                            return Ok((word_start, matches));
+                        }
+                    }
+                }
+            }
+
+            // Contextual completion for `plugin`
+            if first_cmd == "plugin" || first_cmd == "bnb-plugin" {
+                if arg_index == 1 {
+                    let subcmds = ["store", "install", "list", "remove", "info", "update"];
+                    let mut matches = Vec::new();
+                    for sc in subcmds {
+                        if sc.starts_with(current_word) {
+                            matches.push(Pair {
+                                display: sc.to_string(),
+                                replacement: sc.to_string(),
+                            });
+                        }
+                    }
+                    if !matches.is_empty() {
+                        return Ok((word_start, matches));
+                    }
+                } else if arg_index == 2 {
+                    let prev = words.get(1).copied().unwrap_or("");
+                    if prev == "remove" || prev == "uninstall" || prev == "info" {
+                        let mgr = crate::plugins::PluginManager::new();
+                        let mut matches = Vec::new();
+                        for p in mgr.load_installed_plugins() {
+                            if p.plugin.name.starts_with(current_word) {
+                                matches.push(Pair {
+                                    display: p.plugin.name.clone(),
+                                    replacement: p.plugin.name,
+                                });
+                            }
+                        }
+                        if !matches.is_empty() {
+                            return Ok((word_start, matches));
+                        }
+                    } else if prev == "update" || prev == "upgrade" {
+                        let mut matches = Vec::new();
+                        if "--all".starts_with(current_word) {
+                            matches.push(Pair {
+                                display: "--all".to_string(),
+                                replacement: "--all".to_string(),
+                            });
+                        }
+                        let mgr = crate::plugins::PluginManager::new();
+                        for p in mgr.load_installed_plugins() {
+                            if p.plugin.name.starts_with(current_word) {
+                                matches.push(Pair {
+                                    display: p.plugin.name.clone(),
+                                    replacement: p.plugin.name,
+                                });
+                            }
+                        }
+                        if !matches.is_empty() {
+                            return Ok((word_start, matches));
+                        }
+                    } else if prev == "install" {
+                        // Instant official catalog starter suggestions
+                        let starters = ["aws", "docker", "gh", "python", "sysinfo"];
+                        let mut matches = Vec::new();
+                        for s in starters {
+                            if s.starts_with(current_word) {
+                                matches.push(Pair {
+                                    display: s.to_string(),
+                                    replacement: s.to_string(),
+                                });
+                            }
+                        }
+                        if !matches.is_empty() {
+                            return Ok((word_start, matches));
+                        }
+                    }
+                }
+            }
+        }
+
         let mut matches = Vec::new();
 
+        // 3. Command Position Completion (Builtins, Aliases, System Binaries)
         if is_command_pos && !current_word.contains('/') {
             let builtins = [
                 "cd",
+                "mkcd",
+                "pwd",
+                "clear",
+                "echo",
                 "export",
                 "unset",
                 "alias",
                 "unalias",
-                "which",
-                "type",
+                "alias-config",
+                "history",
                 "source",
                 ".",
-                "history",
-                "echo",
-                "pwd",
-                "clear",
-                "exit",
-                "z",
-                "mkcd",
-                "bnb-update",
+                "which",
+                "type",
                 "undo",
+                "rm",
+                "z",
+                "prompt-config",
+                "exit",
+                "bnb-update",
+                "cyberpunk",
+                "vault",
+                "plugin",
             ];
             for b in builtins {
                 if b.starts_with(current_word) {
@@ -106,6 +282,7 @@ impl Completer for BnbHelper {
             }
         }
 
+        // 4. File Path Fallback Completion
         let (file_start, file_matches) = self.completer.complete(line, pos, ctx)?;
         if matches.is_empty() {
             Ok((file_start, file_matches))
@@ -189,7 +366,7 @@ fn tokenize_for_highlight(line: &str) -> Vec<(String, TokenType)> {
                     i += 1;
                 }
             } else {
-                while i < n && (chars[i].is_alphanumeric() || chars[i] == '_') {
+                while i < n && (chars[i].is_alphanumeric() || chars[i] == '_' || chars[i] == ':') {
                     i += 1;
                 }
             }

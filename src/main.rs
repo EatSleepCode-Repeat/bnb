@@ -581,7 +581,7 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
             "📁 Directory Jumper (Ctrl+Z)".to_string(),
             "🚀 Global Project Switcher (Ctrl+O)".to_string(),
             "📝 Git Status Stager (Ctrl+G)".to_string(),
-            "🔐 Secret Vault (vault list)".to_string(),
+            "🔐 Secret Vault Manager (Ctrl+V)".to_string(),
             "🧩 Plugin Marketplace (plugin store)".to_string(),
             "🧩 List Installed Plugins (plugin list)".to_string(),
             "⚙️ Configure Prompt Theme (Ctrl+T)".to_string(),
@@ -662,7 +662,7 @@ impl ConditionalEventHandler for FuzzyCommandPaletteHandler {
                     let _ = crate::tui::trash_vault::run_trash_vault();
                     Some(Cmd::Noop)
                 } else if selected.contains("Secret Vault") {
-                    let _ = crate::vault::run_vault_cli(&["list".to_string()]);
+                    let _ = crate::tui::vault_manager::run_vault_manager();
                     Some(Cmd::Noop)
                 } else if selected.contains("Reload Shell Config") {
                     Some(Cmd::Replace(
@@ -696,6 +696,21 @@ impl ConditionalEventHandler for FuzzyTrashVaultHandler {
         _ctx: &EventContext<'_>,
     ) -> Option<Cmd> {
         let _ = crate::tui::trash_vault::run_trash_vault();
+        Some(Cmd::Noop)
+    }
+}
+
+struct FuzzyVaultManagerHandler;
+
+impl ConditionalEventHandler for FuzzyVaultManagerHandler {
+    fn handle(
+        &self,
+        _evt: &Event,
+        _n: usize,
+        _positive: bool,
+        _ctx: &EventContext<'_>,
+    ) -> Option<Cmd> {
+        let _ = crate::tui::vault_manager::run_vault_manager();
         Some(Cmd::Noop)
     }
 }
@@ -860,6 +875,15 @@ fn main() {
     rl.bind_sequence(
         KeyEvent(KeyCode::Char('U'), Modifiers::CTRL),
         EventHandler::Conditional(Box::new(FuzzyTrashVaultHandler)),
+    );
+    // Secret Vault Manager (Ctrl+V)
+    rl.bind_sequence(
+        KeyEvent(KeyCode::Char('v'), Modifiers::CTRL),
+        EventHandler::Conditional(Box::new(FuzzyVaultManagerHandler)),
+    );
+    rl.bind_sequence(
+        KeyEvent(KeyCode::Char('V'), Modifiers::CTRL),
+        EventHandler::Conditional(Box::new(FuzzyVaultManagerHandler)),
     );
 
     let history_file = env::var("HOME")

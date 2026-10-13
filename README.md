@@ -8,6 +8,10 @@
 
 - **Adaptive Workspace Engine** — Automatically detects project manifests (`Cargo.toml`, `package.json`, `go.mod`, `docker-compose.yml`, `pyproject.toml`) upon entering a directory. Displays real-time stack badges in your prompt (e.g., `[🦀 Rust 🐳 Docker]`) and injects dynamic, stack-aware commands into your Command Palette.
 - **Lightweight Plugin Engine (`bnb plugin`)** — Decoupled manifest model (`plugin.toml`) backed by a GitHub monorepo registry (`registry.json`). Install official or third-party plugins directly (`plugin install <name|user/repo>`), browse the registry marketplace (`plugin store`), and automatically expose community actions in `Ctrl+K` with zero shell startup overhead.
+- **Interactive Secret Vault Manager (`Ctrl+V` / `vault tui`)** — Dedicated full-screen TUI modal to inspect stored secret keys, toggle inline masking/unmasking (`Space`), add new keys interactively (`a`), and safely delete secrets (`d`).
+- **Ephemeral Process Secret Injection (`vault run`)** — Inject encrypted secrets directly into a child process's environment table without leaking variables to the parent shell, disk, or shell history. Supports key scoping via `--only KEY1,KEY2`.
+- **Target-Aware Workspace Actions (`Makefile` & `Taskfile`)** — Automatically scans for `Makefile` and `Taskfile.yml` definitions, parses root targets, displays stack badges (`[🛠️ Make]`, `[⚡ Task]`), and injects executable tasks directly into `Ctrl+K`.
+- **Contextual Tab Completion** — Intelligent, multi-tier tab completion for `vault` (subcommands, keys for `get`/`remove`), `plugin` (installed plugins for `remove`/`info`/`update`, registry catalog for `install`), and inline variable expansion (`$vault:<TAB>`, `${vault:<TAB>}`).
 - **Zero-Leak Secret Vault (`bnb vault`)** — Encrypted local key-value secret store (`~/.bnb/vault.json` with strict `0600` permissions). Reference secrets directly in commands via `$vault:KEY_NAME` or `${vault:KEY_NAME}` to expand values in-memory at execution time, preventing secrets from leaking into `~/.bnb_history` or process argument lists (`ps aux`).
 - **Multi-Line Shell Functions** — Full support for shell function definitions (`name() { ... }` and `function name { ... }`) with multi-line interactive block continuation (` >` prompt) and parameter expansion (`$1`, `$2`, `$@`, `$*`).
 - **Interactive Safety Interceptor** — Styled TUI guardrail modal intercepting destructive operations (`rm -rf *`, `git push --force`, `dd of=/dev/sd*`, `mkfs`, `chmod -R /`). Prompts for user confirmation before execution.
@@ -74,6 +78,7 @@ chsh -s $(which bnb)
 | Shortcut          | Action                                                      |
 | ----------------- | ----------------------------------------------------------- |
 | `Ctrl + K`        | Open Universal Command Palette (Workspace & Plugin actions) |
+| `Ctrl + V`        | Open interactive Secret Vault Manager modal                 |
 | `Ctrl + U`        | Open Visual Trash Vault modal                               |
 | `Ctrl + T`        | Open Prompt Theme Configuration Wizard                      |
 | `Ctrl + G`        | Open Multi-Select Git Status Stager                         |
@@ -95,9 +100,11 @@ chsh -s $(which bnb)
 ## Builtin Commands
 
 | Command                              | Description                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------ |
+| ------------------------------------ | ------------------------------------------------------------------------------ | ---- | ------ | ---- | -------- | ---------------------------------------------------------------------------- |
 | `plugin <store/install/list/remove>` | Browse central registry marketplace and manage installed shell plugins         |
 | `vault <set/get/list/remove>`        | Manage local encrypted secret vault (`$vault:KEY` expansion)                   |
+| `plugin <store                       | install                                                                        | list | remove | info | update>` | Manage lifecycle, inspect manifests, update, and discover shell plugins      |
+| `vault <set                          | get                                                                            | list | remove | run  | tui>`    | Manage secrets, launch TUI manager (`Ctrl+V`), and run commands with secrets |
 | `functions`                          | List all currently defined multi-line shell functions                          |
 | `unfunction <name>`                  | Remove a defined shell function from memory                                    |
 | `alias-config`                       | Launch the interactive TUI Alias Manager                                       |
@@ -143,6 +150,17 @@ plugin list
 
 # Remove an installed plugin
 plugin remove docker
+
+```
+
+### Ephemeral Secret Injection (`vault run`)
+
+```bash
+# Run command with all decrypted vault secrets ephemerally injected
+vault run -- stripe listen
+
+# Scope injection to specific keys only
+vault run --only AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY -- aws s3 ls
 
 ```
 
@@ -229,7 +247,3 @@ Multi-line functions, positional parameters (`$1`, `$@`), plugin manifests, vaul
 ## License
 
 Distributed under the MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
-
-```
-
-```

@@ -4,3 +4,4 @@ pub mod fireworks;
 pub mod fuzzy;
 pub mod prompt_wizard;
 pub mod trash_vault;
+pub mod vault_manager;
