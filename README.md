@@ -1,5 +1,11 @@
 # bnb
 
+[![Crates.io Version](https://img.shields.io/crates/v/bnb-shell.svg)](https://crates.io/crates/bnb-shell)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/bnb-shell.svg)](https://crates.io/crates/bnb-shell)
+[![License: MIT](https://img.shields.io/crates/l/bnb-shell.svg)](https://crates.io/crates/bnb-shell)
+[![Homebrew](https://img.shields.io/badge/Homebrew-EatSleepCode--Repeat%2Ftap-orange.svg)](https://github.com/EatSleepCode-Repeat/homebrew-tap)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ff69b4?logo=github)](https://github.com/sponsors/EatSleepCode-Repeat)
+
 `bnb` is a fast, Rust command shell built for developers who want a polished, zsh-inspired interactive workflow with zero-latency TUI tools, contextual workspaces, and enhanced local security out of the box.
 
 ---
@@ -41,6 +47,12 @@
 ---
 
 ## Installation
+
+### Homebrew (macOS & Linux) — Recommended
+
+```bash
+brew install EatSleepCode-Repeat/tap/bnb
+```
 
 ### From Crates.io
 
@@ -167,6 +179,21 @@ vault run --only AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY -- aws s3 ls
 
 ```
 
+### Background Job Management
+
+```bash
+# Spawn a long-running process in the background
+sleep 15 &
+# [1] 51204
+
+# Inspect tracked processes
+jobs
+# [1] + Running                 sleep 15 (pid: 51204)
+
+# Re-attach and wait in foreground
+fg %1
+```
+
 ### Using Secret Vault (`bnb vault`)
 
 ```bash
@@ -247,8 +274,15 @@ Multi-line functions, positional parameters (`$1`, `$@`), plugin manifests, vaul
 
 ---
 
+## Supporting bnb-shell
+
+`bnb-shell` is an independent, open-source project. If it speeds up your terminal workflow, protects your credentials, or saves you time, consider supporting ongoing development:
+
+- 💖 **[Sponsor on GitHub](https://github.com/sponsors/EatSleepCode-Repeat)** — Fund roadmap milestones, feature requests, and release engineering.
+- ⭐ **Star the repo** — Helps other developers discover the tool.
+
+---
+
 ## License
 
 Distributed under the MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
-
-```
