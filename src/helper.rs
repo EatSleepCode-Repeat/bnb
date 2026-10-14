@@ -97,7 +97,8 @@ impl Completer for BnbHelper {
             // Contextual completion for `vault`
             if first_cmd == "vault" {
                 if arg_index == 1 {
-                    let subcmds = ["set", "get", "list", "remove", "run"];
+                    // Added "tui"
+                    let subcmds = ["set", "get", "list", "remove", "run", "tui"];
                     let mut matches = Vec::new();
                     for sc in subcmds {
                         if sc.starts_with(current_word) {
@@ -244,6 +245,10 @@ impl Completer for BnbHelper {
                 "cyberpunk",
                 "vault",
                 "plugin",
+                "jobs", 
+                "fg", 
+                "doctor", 
+                "bnb-doctor",
             ];
             for b in builtins {
                 if b.starts_with(current_word) {

@@ -14,6 +14,7 @@ pub mod undo;
 pub mod unset;
 pub mod which;
 pub mod z;
+pub mod doctor;
 
 use std::io::Write;
 
@@ -44,6 +45,10 @@ pub fn is_builtin(cmd: &str) -> bool {
             | "vault"
             | "plugin"
             | "bnb-plugin"
+            | "jobs"
+            | "fg"
+            | "doctor" 
+            | "bnb-doctor"
     )
 }
 
@@ -93,6 +98,27 @@ pub fn execute_with_writer(
         "bnb-update" => run_bnb_update(),
         "vault" => crate::vault::run_vault_cli(args),
         "plugin" | "bnb-plugin" => run_plugin_cli(args, writer),
+        "jobs" => {
+            if let Ok(mut table) = crate::jobs::JOB_TABLE.lock() {
+                table.list();
+                Ok(())
+            } else {
+                Err("bnb: jobs: failed to acquire job table lock".to_string())
+            }
+        }
+        "fg" => {
+            let target_id = args.first().and_then(|arg| {
+                let clean = arg.trim_start_matches('%');
+                clean.parse::<usize>().ok()
+            });
+
+            if let Ok(mut table) = crate::jobs::JOB_TABLE.lock() {
+                table.bring_to_foreground(target_id)
+            } else {
+                Err("bnb: fg: failed to acquire job table lock".to_string())
+            }
+        }
+        "doctor" | "bnb-doctor" => doctor::run(args, writer),
         _ => Err(format!("bnb: unknown builtin: {}", cmd)),
     }
 }
