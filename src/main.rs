@@ -7,9 +7,10 @@ mod parser;
 mod plugins;
 mod prompt;
 mod updater;
-pub mod vault;
 mod workspace;
 
+pub mod vault;
+pub mod jobs;
 pub mod safety;
 pub mod tui;
 
@@ -899,6 +900,8 @@ fn main() {
     let mut last_status = None;
 
     loop {
+        crate::jobs::print_completed_jobs();
+        
         let prompt_str = prompt::get_prompt(last_duration, last_status);
 
         match rl.readline(&prompt_str) {

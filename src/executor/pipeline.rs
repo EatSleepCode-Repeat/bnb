@@ -352,7 +352,15 @@ fn execute_pipeline_inner(
 
         if pipeline.run_in_background {
             let child = sys_cmd.spawn().map_err(|e| format!("bnb: error: {}", e))?;
-            println!("[+] Job backgrounded PID: {}", child.id());
+            let pid = child.id();
+            let cmd_str = cmd.args.join(" ");
+
+            if let Ok(mut table) = crate::jobs::JOB_TABLE.lock() {
+                let (job_id, _) = table.add(cmd_str, child);
+                println!("[{}] {}", job_id, pid);
+            } else {
+                println!("[+] Job backgrounded PID: {}", pid);
+            }
             return Ok(0);
         } else {
             let mut child = sys_cmd.spawn().map_err(|e| format!("bnb: error: {}", e))?;
@@ -490,8 +498,21 @@ fn execute_pipeline_inner(
         if let Some(status) = builtin_final_status {
             last_code = status;
         }
-    } else if let Some(last_child) = children.last() {
-        println!("[+] Job backgrounded PID: {}", last_child.id());
+    } else if let Some(last_child) = children.pop() {
+        let pid = last_child.id();
+        let cmd_str = pipeline
+            .commands
+            .iter()
+            .map(|c| c.args.join(" "))
+            .collect::<Vec<_>>()
+            .join(" | ");
+
+        if let Ok(mut table) = crate::jobs::JOB_TABLE.lock() {
+            let (job_id, _) = table.add(cmd_str, last_child);
+            println!("[{}] {}", job_id, pid);
+        } else {
+            println!("[+] Job backgrounded PID: {}", pid);
+        }
     }
 
     Ok(last_code)

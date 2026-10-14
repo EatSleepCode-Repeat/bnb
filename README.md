@@ -8,6 +8,8 @@
 
 - **Adaptive Workspace Engine** — Automatically detects project manifests (`Cargo.toml`, `package.json`, `go.mod`, `docker-compose.yml`, `pyproject.toml`) upon entering a directory. Displays real-time stack badges in your prompt (e.g., `[🦀 Rust 🐳 Docker]`) and injects dynamic, stack-aware commands into your Command Palette.
 - **Lightweight Plugin Engine (`bnb plugin`)** — Decoupled manifest model (`plugin.toml`) backed by a GitHub monorepo registry (`registry.json`). Install official or third-party plugins directly (`plugin install <name|user/repo>`), browse the registry marketplace (`plugin store`), and automatically expose community actions in `Ctrl+K` with zero shell startup overhead.
+- **Background Job Control (`&`, `jobs`, `fg`)** — Spawn non-blocking background jobs using standard trailing `&` syntax, inspect active processes and completion states with `jobs`, and return jobs to the foreground with `fg [%id]`. Completed tasks report cleanly before the next prompt.
+- **Environment & Security Doctor (`doctor`)** — Instant diagnostic command assessing configuration health, verifying strict `0600` secret vault file permissions, checking developer toolchain versions (`git`, `cargo`, `docker`, `make`, etc.), verifying TrueColor capabilities, and flagging duplicate or non-existent `$PATH` directories.
 - **Interactive Secret Vault Manager (`Ctrl+V` / `vault tui`)** — Dedicated full-screen TUI modal to inspect stored secret keys, toggle inline masking/unmasking (`Space`), add new keys interactively (`a`), and safely delete secrets (`d`).
 - **Ephemeral Process Secret Injection (`vault run`)** — Inject encrypted secrets directly into a child process's environment table without leaking variables to the parent shell, disk, or shell history. Supports key scoping via `--only KEY1,KEY2`.
 - **Target-Aware Workspace Actions (`Makefile` & `Taskfile`)** — Automatically scans for `Makefile` and `Taskfile.yml` definitions, parses root targets, displays stack badges (`[🛠️ Make]`, `[⚡ Task]`), and injects executable tasks directly into `Ctrl+K`.
@@ -99,35 +101,36 @@ chsh -s $(which bnb)
 
 ## Builtin Commands
 
-| Command                              | Description                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------ | ---- | ------ | ---- | -------- | ---------------------------------------------------------------------------- |
-| `plugin <store/install/list/remove>` | Browse central registry marketplace and manage installed shell plugins         |
-| `vault <set/get/list/remove>`        | Manage local encrypted secret vault (`$vault:KEY` expansion)                   |
-| `plugin <store                       | install                                                                        | list | remove | info | update>` | Manage lifecycle, inspect manifests, update, and discover shell plugins      |
-| `vault <set                          | get                                                                            | list | remove | run  | tui>`    | Manage secrets, launch TUI manager (`Ctrl+V`), and run commands with secrets |
-| `functions`                          | List all currently defined multi-line shell functions                          |
-| `unfunction <name>`                  | Remove a defined shell function from memory                                    |
-| `alias-config`                       | Launch the interactive TUI Alias Manager                                       |
-| `rm <file ...>`                      | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
-| `undo [--last]`                      | Open Visual Trash Vault TUI or restore the most recently trashed file          |
-| `prompt-config`                      | Launch the interactive prompt theme configuration wizard                       |
-| `cd [dir -]`                         | Change working directory (supports `cd -` and stack badge auto-detection)      |
-| `mkcd <dir>`                         | Create directory hierarchy (`mkdir -p`) and switch into it                     |
-| `z <query>`                          | Jump to highest frecency matching directory                                    |
-| `z -i [query]`                       | Interactively pick from top matching directories in a TUI popup                |
-| `which <cmd>` / `type <cmd>`         | Identify command source (builtin, function, alias, or binary path)             |
-| `alias [key=val]`                    | Set or display command aliases                                                 |
-| `unalias <name -a>`                  | Remove specific alias or clear all (`-a`)                                      |
-| `export [key=val]`                   | Set or print environment variables                                             |
-| `unset <key ...>`                    | Remove environment variables                                                   |
-| `source <file>` / `. <file>`         | Read and execute supported config statements from a file in current shell      |
-| `history [-c]`                       | Print command history or clear it (`-c`)                                       |
-| `echo [-n] [-e] <text>`              | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
-| `pwd`                                | Print current working directory                                                |
-| `clear`                              | Clear terminal screen                                                          |
-| `cyberpunk`                          | Visual TUI celebration / fireworks animation                                   |
-| `bnb-update`                         | Check crates.io and update binary in place                                     |
-| `exit [code]`                        | Terminate shell session with exit code                                         |
+| Command                                               | Description                                                                    |
+| :---------------------------------------------------- | :----------------------------------------------------------------------------- |
+| `plugin <store\|install\|list\|remove\|info\|update>` | Manage lifecycle, inspect manifests, update, and discover shell plugins        |
+| `vault <set\|get\|list\|remove\|run\|tui>`            | Manage secrets, launch TUI manager (`Ctrl+V`), and run commands with secrets   |
+| `functions`                                           | List all currently defined multi-line shell functions                          |
+| `unfunction <name>`                                   | Remove a defined shell function from memory                                    |
+| `alias-config`                                        | Launch the interactive TUI Alias Manager                                       |
+| `rm <file ...>`                                       | Intercepted safety guardrail; soft-deletes items into `~/.bnb/trash/`          |
+| `undo [--last]`                                       | Open Visual Trash Vault TUI or restore the most recently trashed file          |
+| `prompt-config`                                       | Launch the interactive prompt theme configuration wizard                       |
+| `cd [dir \| -]`                                       | Change working directory (supports `cd -` and stack badge auto-detection)      |
+| `mkcd <dir>`                                          | Create directory hierarchy (`mkdir -p`) and switch into it                     |
+| `z <query>`                                           | Jump to highest frecency matching directory                                    |
+| `z -i [query]`                                        | Interactively pick from top matching directories in a TUI popup                |
+| `which <cmd>` / `type <cmd>`                          | Identify command source (builtin, function, alias, or binary path)             |
+| `alias [key=val]`                                     | Set or display command aliases                                                 |
+| `unalias <name \| -a>`                                | Remove specific alias or clear all (`-a`)                                      |
+| `export [key=val]`                                    | Set or print environment variables                                             |
+| `unset <key ...>`                                     | Remove environment variables                                                   |
+| `source <file>` / `. <file>`                          | Read and execute supported config statements from a file in current shell      |
+| `history [-c]`                                        | Print command history or clear it (`-c`)                                       |
+| `echo [-n] [-e] <text>`                               | Print text with option for trailing newline (`-n`) and escape sequences (`-e`) |
+| `pwd`                                                 | Print current working directory                                                |
+| `clear`                                               | Clear terminal screen                                                          |
+| `cyberpunk`                                           | Visual TUI celebration / fireworks animation                                   |
+| `bnb-update`                                          | Check crates.io and update binary in place                                     |
+| `exit [code]`                                         | Terminate shell session with exit code                                         |
+| `jobs`                                                | List active, running, and completed background jobs                            |
+| `fg [%id]`                                            | Bring a background job to the foreground and await completion                  |
+| `doctor` \| `bnb-doctor`                              | Run environment diagnostics (vault permissions, toolchains, `$PATH` hygiene)   |
 
 ---
 
