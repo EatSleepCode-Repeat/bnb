@@ -13,6 +13,7 @@ pub mod vault;
 pub mod jobs;
 pub mod safety;
 pub mod tui;
+pub mod guard;
 
 use std::env;
 use std::fs;
@@ -912,10 +913,22 @@ fn main() {
                     continue;
                 }
 
-                let _ = rl.add_history_entry(trimmed);
+                // 🛡️ Secret Guard: Intercept credentials BEFORE history & execution
+                let command_to_run = match guard::intercept_if_secret(trimmed, |key, val| {
+                    vault::set_secret(key, val).map_err(|e| e.to_string())
+                }) {
+                    guard::GuardAction::Execute(cmd) => cmd,
+                    guard::GuardAction::Abort => {
+                        last_duration = None;
+                        continue;
+                    }
+                };
+
+                // Add ONLY the sanitized command to history (e.g. $vault:gh_token)
+                let _ = rl.add_history_entry(&command_to_run);
                 let start_time = Instant::now();
 
-                let code = run_line(trimmed, last_status.unwrap_or(0));
+                let code = run_line(&command_to_run, last_status.unwrap_or(0));
                 last_status = Some(code);
                 last_duration = Some(start_time.elapsed());
 

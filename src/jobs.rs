@@ -16,6 +16,12 @@ pub struct JobTable {
     next_id: usize,
 }
 
+impl Default for JobTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JobTable {
     pub const fn new() -> Self {
         Self {

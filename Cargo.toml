@@ -1,14 +1,16 @@
 [package]
 name = "bnb-shell"
-version = "0.5.3"
+version = "0.5.4"
 edition = "2021"
 authors = ["Chris Clines"]
-description = "A fast, polished, cross-platform terminal shell built in Rust with Powerlevel10k aesthetics."
+description = "A fast, polished terminal shell built in Rust with built-in Secret Guard, local vault, and Powerlevel10k aesthetics."
 license = "MIT"
 repository = "https://github.com/EatSleepCode-Repeat/bnb"
 readme = "README.md"
-keywords = ["shell", "terminal", "zsh", "prompt", "cli"]
-categories = ["command-line-utilities"]
+homepage = "https://github.com/EatSleepCode-Repeat/bnb"
+
+keywords = ["shell", "terminal", "zsh", "secrets", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
 name = "bnb"
@@ -24,3 +26,4 @@ serde_json = "1.0"
 chrono = "0.4"
 dirs = "6.0"
 toml = "0.8"
+regex = "1.10"
