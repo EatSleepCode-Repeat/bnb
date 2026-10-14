@@ -13,6 +13,7 @@
 ## Features
 
 - **Adaptive Workspace Engine** — Automatically detects project manifests (`Cargo.toml`, `package.json`, `go.mod`, `docker-compose.yml`, `pyproject.toml`) upon entering a directory. Displays real-time stack badges in your prompt (e.g., `[🦀 Rust 🐳 Docker]`) and injects dynamic, stack-aware commands into your Command Palette.
+- **Secret Guard**: Intercepts pasted or typed credentials (GitHub PATs, OpenAI/Anthropic keys, AWS keys, Stripe tokens, Slack tokens) in real time. It prompts to save them into the local encrypted vault and rewrites the command inline before execution, preventing raw credentials from ever touching history files or process logs.
 - **Lightweight Plugin Engine (`bnb plugin`)** — Decoupled manifest model (`plugin.toml`) backed by a GitHub monorepo registry (`registry.json`). Install official or third-party plugins directly (`plugin install <name|user/repo>`), browse the registry marketplace (`plugin store`), and automatically expose community actions in `Ctrl+K` with zero shell startup overhead.
 - **Background Job Control (`&`, `jobs`, `fg`)** — Spawn non-blocking background jobs using standard trailing `&` syntax, inspect active processes and completion states with `jobs`, and return jobs to the foreground with `fg [%id]`. Completed tasks report cleanly before the next prompt.
 - **Environment & Security Doctor (`doctor`)** — Instant diagnostic command assessing configuration health, verifying strict `0600` secret vault file permissions, checking developer toolchain versions (`git`, `cargo`, `docker`, `make`, etc.), verifying TrueColor capabilities, and flagging duplicate or non-existent `$PATH` directories.
@@ -143,6 +144,24 @@ chsh -s $(which bnb)
 | `jobs`                                                | List active, running, and completed background jobs                            |
 | `fg [%id]`                                            | Bring a background job to the foreground and await completion                  |
 | `doctor` \| `bnb-doctor`                              | Run environment diagnostics (vault permissions, toolchains, `$PATH` hygiene)   |
+
+---
+
+## Secret Guard
+
+Accidentally pasting API tokens into commands often persists them in plaintext across shell histories (`.zsh_history`, `.bash_history`), process listings, or screen recordings.
+
+`bnb` intercepts known credential formats at the REPL prompt before command execution or history logging:
+
+```text
+bnb ❯ curl -H "Authorization: Bearer ghp_111122223333444455556666777788889999" [https://api.github.com/user](https://api.github.com/user)
+
+⚠️  bnb Secret Guard: Potential credential detected in input!
+  [1] GitHub Token: ghp_...999
+  Save to bnb vault? [Yes / ignore / cancel] (default: Y):
+  Vault key name (default: 'gh_token'):
+  ✓ Stored in vault as 'gh_token' and rewritten to: $vault:gh_token
+```
 
 ---
 

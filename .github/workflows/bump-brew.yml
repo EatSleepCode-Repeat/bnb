@@ -1,0 +1,69 @@
+name: Bump Homebrew Formula
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  bump-tap:
+    name: Bump Tap Formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Tag Version
+        id: vars
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Wait for crates.io CDN
+        run: |
+          echo "Waiting 30 seconds for crates.io CDN to package release..."
+          sleep 30
+
+      - name: Fetch Tarball & Compute SHA256
+        id: checksum
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          CRATE_URL="https://static.crates.io/crates/bnb-shell/bnb-shell-${VERSION}.crate"
+
+          # Fetch and compute sha256 checksum
+          SHA=$(curl -sSL "$CRATE_URL" | sha256sum | awk '{print $1}')
+
+          if [ -z "$SHA" ] || [ ${#SHA} -ne 64 ]; then
+            echo "Failed to calculate SHA256 from $CRATE_URL"
+            exit 1
+          fi
+
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "url=$CRATE_URL" >> $GITHUB_OUTPUT
+
+      - name: Check out homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: EatSleepCode-Repeat/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update Formula and Push
+        run: |
+          cd tap
+          FORMULA_FILE="Formula/bnb.rb"
+
+          NEW_URL="${{ steps.checksum.outputs.url }}"
+          NEW_SHA="${{ steps.checksum.outputs.sha }}"
+          VERSION="${{ steps.vars.outputs.version }}"
+
+          # Replace URL and sha256 lines in Formula/bnb.rb
+          sed -i -E "s|url \".*\"|url \"${NEW_URL}\"|" "$FORMULA_FILE"
+          sed -i -E "s|sha256 \".*\"|sha256 \"${NEW_SHA}\"|" "$FORMULA_FILE"
+
+          # Commit changes if the file was modified
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "$FORMULA_FILE"
+          if git diff --staged --quiet; then
+            echo "Formula is already up to date."
+          else
+            git commit -m "bump: bnb ${VERSION}"
+            git push origin master
+          fi
